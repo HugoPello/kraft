@@ -71,7 +71,7 @@ public class Controlador {
 		_00_Login vista = (_00_Login) misVistas[0];
 
 		if (!miModelo.conectarBD()) {
-			vista.mostrarError("Error: No se pudo conectar a la base de datos.");
+			vista.mostrarError("Error: No se pudo conectar a la base de datos. Revisa la configuración.");
 			return;
 		}
 
@@ -80,6 +80,12 @@ public class Controlador {
 
 		miModelo.loginSeguro(usr, pwd);
 		String resultado = miModelo.getResultado();
+
+		// Protección anti NullPointer por si acaso
+		if (resultado == null) {
+			vista.mostrarError("Error crítico de comunicación con la Base de Datos.");
+			return;
+		}
 
 		if (resultado.equals("Correcto")) {
 			miModelo.setUsuarioLogueado(usr);
@@ -91,6 +97,8 @@ public class Controlador {
 			}
 		} else if (resultado.equals("Incorrecto")) {
 			vista.mostrarError("Usuario o contraseña incorrectos");
+		} else if (resultado.equals("ErrorBD")) {
+			vista.mostrarError("La Base de datos rechazó la consulta. Revisa tu consola de Eclipse.");
 		} else {
 			System.exit(0);
 		}

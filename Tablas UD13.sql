@@ -1,7 +1,7 @@
 Create
 database Tablas;
 use
-tablas;
+Tablas;
 
 -- ========================================================
 -- 1. TABLAS PRINCIPALES (Entidades Fuertes)
@@ -126,34 +126,6 @@ INSERT INTO EVENTOS (nombre, tipo_evento, puntos_recompensa, fecha_evento) VALUE
 ('Lectura técnica 30 min', 'Hábito', 40, '2026-05-11 21:00:00'),
 ('Tenis (Partido)', 'Actividad', 140, '2026-05-21 16:30:00');
 
-CREATE TABLE NOTICIAS (
-	id_noticia INT AUTO_INCREMENT PRIMARY KEY,
-    titulo varchar(200) NOT NULL,
-    descripcion varchar(500),
-    tipo ENUM("Evento", "Aviso", "Novedad", "Info") NOT NULL
-    );
-    
-INSERT INTO NOTICIAS (titulo, tipo) VALUES 
-('Maratón Solidaria Kraft - Próximo Domingo', 'Evento'),
-('Clase Maestra de BJJ con Invitado Especial', 'Evento'),
-('Torneo de Press de Banca: ¡Inscríbete ya!', 'Evento'),
-('Mantenimiento del servidor: Lunes de 02 a 04', 'Aviso'),
-('Zona de musculación cerrada por reformas', 'Aviso'),
-('Nueva rutina de Hipertrofia disponible', 'Novedad'),
-('Ahora puedes conectar tu Smartwatch con Kraft', 'Novedad'),
-('Beneficios del descanso activo en deportistas', 'Info'),
-('Cómo calcular tus macros correctamente', 'Info'),
-('Atención: El uso de toalla es obligatorio', 'Aviso'),
-('Taller de cocina saludable: Batch Cooking para la semana', 'Evento'),
-('Nuevas pesas rusas (Kettlebells) disponibles en sala', 'Novedad'),
-('Guía rápida: ¿Qué comer después de entrenar?', 'Info'),
-('Atención: El vestuario masculino estará en limpieza a las 15:00', 'Aviso'),
-('Reto Mensual: 10.000 pasos diarios por 30 días', 'Evento'),
-('Podcast: El impacto del sueño en el rendimiento físico', 'Info'),
-('¡Ya puedes reservar clases de Yoga desde la App!', 'Novedad'),
-('Aviso: Se recuerda no dejar las pesas en el suelo tras su uso', 'Aviso'),
-('Promoción: 2x1 en barritas de proteína en la recepción', 'Novedad'),
-('Entrenamiento Funcional: ¿Por qué deberías probarlo?', 'Info');
 
 CREATE TABLE GRUPO (
     id_grupo INT AUTO_INCREMENT PRIMARY KEY,

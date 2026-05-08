@@ -221,25 +221,28 @@ public class Modelo {
 	// =========================================================================
 
 	public void loginSeguro(String usr, String pwd) {
-		String query = "SELECT * FROM users WHERE usr=? AND pwd=?";
-		try {
-			PreparedStatement pstmt = conexion.prepareStatement(query);
-			pstmt.setString(1, usr);
-			pstmt.setString(2, pwd);
-			ResultSet rset = pstmt.executeQuery();
+        // Pon el nombre de la tabla EXACTAMENTE igual que lo creaste en Aiven (por ej. USERS)
+        String query = "SELECT * FROM USERS WHERE USR=? AND PWD=?";
+        try {
+            PreparedStatement pstmt = conexion.prepareStatement(query);
+            pstmt.setString(1, usr);
+            pstmt.setString(2, pwd);
+            ResultSet rset = pstmt.executeQuery();
 
-			if (rset.next()) {
-				resultado = "Correcto";
-				this.ROL = rset.getBoolean("ROL");
-				this.fallos = 0;
-			} else {
-				fallos++;
-				resultado = (fallos == 3) ? "Cerrar" : "Incorrecto";
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
+            if (rset.next()) {
+                resultado = "Correcto";
+                this.ROL = rset.getBoolean("ROL");
+                this.fallos = 0;
+            } else {
+                fallos++;
+                resultado = (fallos == 3) ? "Cerrar" : "Incorrecto";
+            }
+        } catch (SQLException e) {
+            System.err.println("=== ERROR SQL EN LOGIN ===");
+            e.printStackTrace(); // Esto te dirá el fallo real (tabla no existe, etc)
+            resultado = "ErrorBD"; // Blindamos el resultado para que no sea null
+        }
+    }
 
 	public boolean registroCompleto(String usr, String pwd, boolean rol, String fechaNac, int idPregunta,
 			String respuesta) {
