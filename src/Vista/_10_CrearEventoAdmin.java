@@ -1,0 +1,351 @@
+// @Autor: Hugo / Carloss
+package Vista;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerDateModel;
+import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableModel;
+
+import Controlador.Controlador;
+import Modelo.Modelo;
+
+public class _10_CrearEventoAdmin extends JFrame implements Vista {
+
+	private static final long serialVersionUID = 1L;
+	private JPanel contentPane;
+	private JPanel panelCentral;
+
+	// Botones del Header
+	private JButton btnCerrar, btnMin;
+	private JButton btnHome, btnPerfil, btnActividades, btnAjustes, btnTrofeo, btnCarrito;
+
+	// Colores de la app
+	private final Color NARANJA = new Color(255, 128, 0);
+	private final Color GRIS_FONDO = new Color(25, 25, 25);
+	private final Color GRIS_RECTANGULO = new Color(40, 40, 40);
+
+	private Controlador miControlador;
+	private Modelo miModelo;
+	private JTable table;
+	private JTextField txtNombreEvento;
+	private JTextField txtPuntosEvento;
+	private JSpinner spinner;
+
+	public _10_CrearEventoAdmin() {
+		// --- 1. CONFIGURACIÓN BÁSICA DE LA VENTANA ---
+		setUndecorated(true);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setExtendedState(JFrame.MAXIMIZED_BOTH);
+		setBounds(0, 0, 1920, 1080);
+
+		contentPane = new JPanel();
+		contentPane.setBackground(GRIS_FONDO);
+		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		setContentPane(contentPane);
+		contentPane.setLayout(new BorderLayout(0, 0));
+
+		// --- 2. CABECERA (HEADER) UNIFICADA ---
+		JPanel header = new JPanel();
+		header.setBackground(new Color(15, 15, 15));
+		header.setPreferredSize(new Dimension(0, 70));
+		header.setLayout(new BorderLayout());
+		contentPane.add(header, BorderLayout.NORTH);
+
+		// Header Izquierda (Logo)
+		JPanel headerLeft = new JPanel();
+		headerLeft.setOpaque(false);
+		headerLeft.setLayout(new FlowLayout(FlowLayout.LEFT, 20, 15));
+		header.add(headerLeft, BorderLayout.WEST);
+
+		JLabel lblKraft = new JLabel("KRAFT");
+		lblKraft.setForeground(NARANJA);
+		lblKraft.setFont(new Font("Arial Black", Font.BOLD, 26));
+		headerLeft.add(lblKraft);
+
+		JPanel fotoPerfil = new JPanel();
+		fotoPerfil.setBackground(Color.DARK_GRAY);
+		fotoPerfil.setPreferredSize(new Dimension(40, 40));
+		headerLeft.add(fotoPerfil);
+
+		// Header Derecha (Navegación y Control)
+		JPanel headerRight = new JPanel();
+		headerRight.setOpaque(false);
+		headerRight.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 15));
+		header.add(headerRight, BorderLayout.EAST);
+
+		// Instanciamos botones con el estilo de Carlos
+		btnHome = crearBotonIcono("🏠");
+		btnHome.addActionListener(e -> miControlador.cambiarVentana(10, 2));
+
+		btnPerfil = crearBotonIcono("👤");
+		btnPerfil.addActionListener(e -> miControlador.cambiarVentana(10, 8));
+
+		btnActividades = crearBotonIcono("🏃");
+		btnActividades.addActionListener(e -> miControlador.cambiarVentana(10, 3));
+
+		btnCarrito = crearBotonIcono("🛒");
+		btnCarrito.addActionListener(e -> miControlador.cambiarVentana(10, 7));
+
+		btnTrofeo = crearBotonIcono("🏆");
+		btnTrofeo.addActionListener(e -> miControlador.cambiarVentana(10, 6));
+
+		btnAjustes = crearBotonIcono("⚙");
+		btnAjustes.addActionListener(e -> miControlador.cambiarVentana(10, 11));
+
+		headerRight.add(btnHome);
+		headerRight.add(btnPerfil);
+		headerRight.add(btnActividades);
+		headerRight.add(btnCarrito);
+		headerRight.add(btnTrofeo);
+		headerRight.add(btnAjustes);
+
+		JPanel separador = new JPanel();
+		separador.setPreferredSize(new Dimension(10, 0));
+		separador.setOpaque(false);
+		headerRight.add(separador);
+
+		btnMin = new JButton("-");
+		estilizarBotonControl(btnMin, 26, Color.GRAY);
+		btnMin.addActionListener(e -> setState(JFrame.ICONIFIED));
+		headerRight.add(btnMin);
+
+		btnCerrar = new JButton("X");
+		estilizarBotonControl(btnCerrar, 18, new Color(220, 40, 40));
+		btnCerrar.addActionListener(e -> System.exit(0));
+		headerRight.add(btnCerrar);
+
+		// --- 3. ÁREA DE TRABAJO ---
+		panelCentral = new JPanel();
+		panelCentral.setBackground(GRIS_FONDO);
+		panelCentral.setLayout(null);
+		contentPane.add(panelCentral, BorderLayout.CENTER);
+
+		JPanel panel = new JPanel();
+		panel.setBounds(558, 150, 448, 420);
+		panelCentral.add(panel);
+		panel.setBackground(GRIS_RECTANGULO);
+		panel.setLayout(null);
+
+		JScrollPane scrollPane = new JScrollPane();
+		scrollPane.setBounds(10, 39, 230, 236);
+		panel.add(scrollPane);
+
+		table = new JTable();
+		table.setFont(new Font("Tahoma", Font.PLAIN, 9));
+		table.setModel(
+				new DefaultTableModel(
+						new Object[][] { },
+						new String[] { "Evento", "Tipo", "Puntos" }) {
+					// Con esto se bloquea la edición de celdas
+					@Override
+					public boolean isCellEditable(int row, int column) {
+						return false;
+					}
+				});
+		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		// Cambiamos el tamaño de las filas manualmente
+		table.getColumnModel().getColumn(0).setPreferredWidth(180);
+		table.getColumnModel().getColumn(1).setPreferredWidth(80);
+
+		table.setForeground(NARANJA);
+		table.setBackground(GRIS_FONDO);
+		scrollPane.setViewportView(table);
+
+		JLabel lblNombreEvento = new JLabel("Nombre del evento:");
+		lblNombreEvento.setBounds(250, 39, 149, 12);
+		lblNombreEvento.setForeground(NARANJA);
+		panel.add(lblNombreEvento);
+
+		txtNombreEvento = new JTextField();
+		txtNombreEvento.setBounds(250, 60, 171, 18);
+		panel.add(txtNombreEvento);
+		txtNombreEvento.setColumns(10);
+
+		JLabel lblTipoEvento = new JLabel("Tipo de Evento:");
+		lblTipoEvento.setBounds(250, 106, 135, 12);
+		lblTipoEvento.setForeground(NARANJA);
+		panel.add(lblTipoEvento);
+
+		JComboBox cbxTipoEvento = new JComboBox();
+		cbxTipoEvento.setModel(new DefaultComboBoxModel(new String[] { "Actividad", "Hábito" }));
+		cbxTipoEvento.setBounds(250, 128, 171, 18);
+		panel.add(cbxTipoEvento);
+
+		JLabel lblPuntosEvento = new JLabel("Puntos del Evento:");
+		lblPuntosEvento.setBounds(250, 172, 171, 12);
+		lblPuntosEvento.setForeground(NARANJA);
+		panel.add(lblPuntosEvento);
+
+		txtPuntosEvento = new JTextField();
+		txtPuntosEvento.setBounds(250, 194, 171, 18);
+		panel.add(txtPuntosEvento);
+		txtPuntosEvento.setColumns(10);
+
+		JButton btnAñadirEvento = new JButton("Añadir evento");
+		btnAñadirEvento.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+		        try {
+		            String nombre = txtNombreEvento.getText();
+		            String tipo = cbxTipoEvento.getSelectedItem().toString();
+		            int puntos = Integer.parseInt(txtPuntosEvento.getText());
+		            
+		            // Extraer y formatear fecha del Spinner
+		            java.util.Date date = (java.util.Date) spinner.getValue();
+		            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		            String fechaSQL = sdf.format(date);
+
+		            if (miControlador.añadirEvento(nombre, tipo, puntos, fechaSQL)) {
+		                JOptionPane.showMessageDialog(null, "Evento añadido con éxito");
+		                // Limpiar campos
+		                txtNombreEvento.setText("");
+		                txtPuntosEvento.setText("");
+		            }
+		        } catch (NumberFormatException ex) {
+		            JOptionPane.showMessageDialog(null, "Los puntos deben ser un número válido");
+		        }
+		    }
+		});
+		btnAñadirEvento.setBounds(306, 303, 115, 34);
+		btnAñadirEvento.setBackground(GRIS_FONDO);
+		btnAñadirEvento.setForeground(NARANJA);
+		panel.add(btnAñadirEvento);
+
+		JButton btnEliminarEvento = new JButton("Eliminar Evento");
+		btnEliminarEvento.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+		        int fila = table.getSelectedRow();
+		        if (fila != -1) {
+		            String nombre = table.getValueAt(fila, 0).toString();
+		            int confirm = JOptionPane.showConfirmDialog(null, "¿Eliminar " + nombre + "?");
+		            
+		            if (confirm == JOptionPane.YES_OPTION) {
+		                if (miControlador.eliminarEvento(nombre)) {
+		                    JOptionPane.showMessageDialog(null, "Evento eliminado");
+		                } else {
+		                    JOptionPane.showMessageDialog(null, "No se pudo eliminar");
+		                }
+		            }
+		        } else {
+		            JOptionPane.showMessageDialog(null, "Selecciona un evento de la tabla");
+		        }
+		    }
+		});
+		btnEliminarEvento.setBounds(91, 303, 135, 34);
+		btnEliminarEvento.setBackground(GRIS_FONDO);
+		btnEliminarEvento.setForeground(NARANJA);
+		panel.add(btnEliminarEvento);
+
+		JButton btnVolverPanel = new JButton("Volver al panel");
+		btnVolverPanel.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				miControlador.cambiarVentana(10, 11);
+			}
+		});
+		btnVolverPanel.setBounds(159, 376, 135, 34);
+		btnVolverPanel.setBackground(GRIS_FONDO);
+		btnVolverPanel.setForeground(NARANJA);
+		panel.add(btnVolverPanel);
+
+		JLabel lblFechaEvento = new JLabel("Fecha del Evento:");
+		lblFechaEvento.setBounds(250, 235, 149, 12);
+		lblFechaEvento.setForeground(NARANJA);
+		panel.add(lblFechaEvento);
+
+		spinner = new JSpinner();
+		spinner.setModel(new SpinnerDateModel(new Date(1777240800000L), null, null, Calendar.DAY_OF_YEAR));
+		spinner.setBounds(250, 257, 171, 18);
+		panel.add(spinner);
+		
+		this.addComponentListener(new java.awt.event.ComponentAdapter() {
+	        @Override
+	        public void componentShown(java.awt.event.ComponentEvent ce) {
+	            cargarTablaEventos(); 
+	        }
+	    });
+	}
+
+	// --- MÉTODOS DE SOPORTE PARA EL HEADER ---
+
+	private JButton crearBotonIcono(String icono) {
+		JButton boton = new JButton(icono);
+		boton.setPreferredSize(new Dimension(45, 40));
+		boton.setBackground(GRIS_RECTANGULO);
+		boton.setForeground(Color.WHITE);
+		boton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
+		boton.setBorder(null);
+		boton.setFocusPainted(false);
+		boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		return boton;
+	}
+
+	private void estilizarBotonControl(JButton boton, int tamanoFuente, Color colorHover) {
+		boton.setPreferredSize(new Dimension(45, 40));
+		boton.setBackground(new Color(15, 15, 15));
+		boton.setForeground(Color.WHITE);
+		boton.setFont(new Font("Arial", Font.BOLD, tamanoFuente));
+		boton.setBorder(null);
+		boton.setFocusPainted(false);
+		boton.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				boton.setBackground(colorHover);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				boton.setBackground(new Color(15, 15, 15));
+			}
+		});
+	}
+	
+	public void cargarTablaEventos() {
+		if (miControlador != null) {
+	        try {
+	            ArrayList<Object[]> datos = miControlador.getEventos();
+	            DefaultTableModel modelo = (DefaultTableModel) table.getModel();
+
+	            modelo.setRowCount(0); 
+	            for (Object[] fila : datos) {
+	                modelo.addRow(fila);
+	            }
+	        } catch (Exception ex) {
+	            System.err.println("Error al refrescar eventos: " + ex.getMessage());
+	        }
+	    }
+	}
+
+	@Override
+	public void setModelo(Modelo miModelo) {
+		this.miModelo = miModelo;
+	}
+
+	@Override
+	public void setControlador(Controlador miControlador) {
+	    this.miControlador = miControlador;
+	}
+}
