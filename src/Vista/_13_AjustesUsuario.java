@@ -1,4 +1,4 @@
-package Vista;
+	package Vista;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -160,6 +160,9 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		btnSubirFoto.setForeground(Color.WHITE);
 		btnSubirFoto.setBounds(50, 465, 200, 40);
 		btnSubirFoto.setFocusPainted(false);
+		btnSubirFoto.addActionListener(e -> {
+			if(miControlador != null) miControlador.subirFotoPerfil();
+		});
 		cajaAjustes.add(btnSubirFoto);
 
 		// 5. Botones Guardar y Cancelar

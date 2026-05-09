@@ -25,6 +25,7 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 
 	private JLabel lblNombreUserBanner;
 	private JLabel lblStatsUserBanner;
+	private JLabel lblFotoPerfil;
 
 	// --- AÑADIDO: Guardamos las tablas como variables para poder actualizarlas ---
 	private JTable tablaLogros;
@@ -107,10 +108,12 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 		panelBanner.setLayout(null);
 		contenedorReal.add(panelBanner);
 
-		JPanel fotoP = new JPanel();
-		fotoP.setBackground(Color.DARK_GRAY);
-		fotoP.setBounds(30, 30, 120, 120);
-		panelBanner.add(fotoP);
+		lblFotoPerfil = new JLabel();
+		lblFotoPerfil.setOpaque(true);
+		lblFotoPerfil.setBackground(Color.DARK_GRAY);
+		lblFotoPerfil.setHorizontalAlignment(SwingConstants.CENTER);
+		lblFotoPerfil.setBounds(30, 30, 120, 120);
+		panelBanner.add(lblFotoPerfil);
 
 		lblNombreUserBanner = new JLabel("CARGANDO...");
 		lblNombreUserBanner.setFont(new Font("Arial Black", Font.BOLD, 30));
@@ -315,6 +318,16 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 	public void setTablasPerfil(Object[][] datosLogros, Object[][] datosInventario) {
 		tablaLogros.setModel(new DefaultTableModel(datosLogros, new String[] { "Logro", "Fecha" }));
 		tablaCosmeticos.setModel(new DefaultTableModel(datosInventario, new String[] { "Ítem", "Tipo" }));
+	}
+	
+	public void setImagenPerfil(ImageIcon icono) {
+		if (icono != null) {
+			lblFotoPerfil.setIcon(icono);
+		} else {
+			lblFotoPerfil.setIcon(null);
+			lblFotoPerfil.setText("Sin Foto");
+			lblFotoPerfil.setForeground(Color.WHITE);
+		}
 	}
 
 	@Override
