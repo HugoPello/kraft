@@ -249,7 +249,7 @@ public class Modelo {
 		try {
 			conexion.setAutoCommit(false);
 
-			String query1 = "INSERT INTO users (USR, PWD, ROL, fechaNacimiento) VALUES (?, ?, ?, ?)";
+			String query1 = "INSERT INTO USERS (USR, PWD, ROL, fechaNacimiento) VALUES (?, ?, ?, ?)";
 			PreparedStatement ps1 = conexion.prepareStatement(query1);
 			ps1.setString(1, usr);
 			ps1.setString(2, pwd);
@@ -262,7 +262,7 @@ public class Modelo {
 			}
 			ps1.executeUpdate();
 
-			String query2 = "INSERT INTO responde_pregunta (nombreUsuario, id_pregunta, respuesta_texto) VALUES (?, ?, ?)";
+			String query2 = "INSERT INTO RESPONDE_PREGUNTA (nombreUsuario, id_pregunta, respuesta_texto) VALUES (?, ?, ?)";
 			PreparedStatement ps2 = conexion.prepareStatement(query2);
 			ps2.setString(1, usr);
 			ps2.setInt(2, idPregunta);
@@ -288,7 +288,7 @@ public class Modelo {
 	}
 
 	public boolean existeUsuario(String usr) {
-		String query = "SELECT USR FROM users WHERE USR = ?";
+		String query = "SELECT USR FROM USERS WHERE USR = ?";
 		try (PreparedStatement pstmt = conexion.prepareStatement(query)) {
 			pstmt.setString(1, usr);
 			ResultSet rs = pstmt.executeQuery();
@@ -299,7 +299,7 @@ public class Modelo {
 	}
 
 	public int modificar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE users SET PWD = ? WHERE USR = ?")) {
+		try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE USERS SET PWD = ? WHERE USR = ?")) {
 			pstmt.setString(1, pwd);
 			pstmt.setString(2, usr);
 			return pstmt.executeUpdate();
@@ -309,7 +309,7 @@ public class Modelo {
 	}
 
 	public int borrar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM users WHERE usr = ? AND pwd=?")) {
+		try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM USERS WHERE usr = ? AND pwd=?")) {
 			pstmt.setString(1, usr);
 			pstmt.setString(2, pwd);
 			return pstmt.executeUpdate();
@@ -320,7 +320,7 @@ public class Modelo {
 
 	public ArrayList<Object[]> obtenerDatosUsuarios() {
 		ArrayList<Object[]> listaUsuarios = new ArrayList<>();
-		try (PreparedStatement pstmt = conexion.prepareStatement("SELECT USR, PWD FROM users");
+		try (PreparedStatement pstmt = conexion.prepareStatement("SELECT USR, PWD FROM USERS");
 				ResultSet rs = pstmt.executeQuery()) {
 
 			while (rs.next()) {
@@ -332,7 +332,7 @@ public class Modelo {
 	}
 
 	public boolean insertarUsuarioAdmin(String usr, String pwd) {
-		String query = "INSERT INTO users (USR, PWD, ROL) VALUES (?, ?, ?)";
+		String query = "INSERT INTO USERS (USR, PWD, ROL) VALUES (?, ?, ?)";
 		try (PreparedStatement ps = conexion.prepareStatement(query)) {
 			ps.setString(1, usr);
 			ps.setString(2, pwd);
@@ -342,6 +342,53 @@ public class Modelo {
 			return false;
 		}
 	}
+	
+	// --- MÉTODOS PARA RECUPERACIÓN DE CONTRASEÑA Y PERFIL ---
+
+		// Verifica si la respuesta secreta coincide con la de la BD
+		public boolean verificarRespuestaSeguridad(String usr, int idPregunta, String respuesta) {
+			// OJO con las mayúsculas/minúsculas de tus tablas en Aiven. 
+			String sql = "SELECT respuesta_texto FROM RESPONDE_PREGUNTA WHERE nombreUsuario = ? AND id_pregunta = ?";
+			try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+				ps.setString(1, usr);
+				ps.setInt(2, idPregunta);
+				ResultSet rs = ps.executeQuery();
+				if (rs.next()) {
+					String respReal = rs.getString("respuesta_texto");
+					// equalsIgnoreCase para que no importe si pone "Madrid" o "madrid"
+					return respReal.equalsIgnoreCase(respuesta.trim()); 
+				}
+			} catch (SQLException e) {
+				System.err.println("Error verificando seguridad: " + e.getMessage());
+			}
+			return false;
+		}
+
+		// Obtiene [puntos, total_actividades_completadas]
+		public int[] obtenerEstadisticasUsuario(String usr) {
+			int[] stats = new int[]{0, 0}; 
+			String sqlPuntos = "SELECT puntos FROM USERS WHERE USR = ?";
+			String sqlActividades = "SELECT COUNT(*) FROM COMPLETAR_ACTIVIDAD WHERE nombreUsuario = ?";
+
+			try {
+				// 1. Obtener Puntos
+				PreparedStatement ps1 = conexion.prepareStatement(sqlPuntos);
+				ps1.setString(1, usr);
+				ResultSet rs1 = ps1.executeQuery();
+				if (rs1.next()) stats[0] = rs1.getInt(1);
+				ps1.close();
+
+				// 2. Obtener Actividades Completadas
+				PreparedStatement ps2 = conexion.prepareStatement(sqlActividades);
+				ps2.setString(1, usr);
+				ResultSet rs2 = ps2.executeQuery();
+				if (rs2.next()) stats[1] = rs2.getInt(1);
+				ps2.close();
+			} catch (SQLException e) {
+				System.err.println("Error sacando estadisticas: " + e.getMessage());
+			}
+			return stats;
+		}
 
 	// =========================================================================
 	// 5. GESTIÓN DE ACTIVIDADES, MISIONES Y EVENTOS

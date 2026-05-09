@@ -9,6 +9,8 @@ import Vista._00_Login;
 import Vista._01_Registro;
 import Vista._02_Inicio;
 import Vista._04_DentroActividad;
+import Vista._08_PerfilUsuario;
+import Vista._09_OlvidoContraseña;
 import Vista._10_CrearEventoAdmin;
 import Vista._11_PanelAdmin;
 import Vista._14_CrearActividad;
@@ -171,6 +173,75 @@ public class Controlador {
 	public int modificarUsuario(String usr, String pwd) {
 		return miModelo.modificar(usr, pwd);
 	}
+	
+	// =========================================================================
+		// 8. RECUPERACIÓN DE CONTRASEÑA Y PERFIL
+		// =========================================================================
+
+		public void restablecerContrasena() {
+			_09_OlvidoContraseña vista = (_09_OlvidoContraseña) misVistas[9];
+
+			String usr = vista.getUsuario();
+			int idPregunta = vista.getIndicePregunta(); 
+			String respuesta = vista.getRespuestaSeguridad();
+			String nuevaPass = vista.getNuevaPass();
+			String confirmPass = vista.getConfirmPass();
+
+			if (usr.isEmpty() || respuesta.isEmpty() || nuevaPass.isEmpty()) {
+				vista.mostrarMensaje("Por favor, rellena todos los campos.");
+				return;
+			}
+			if (idPregunta == 0) {
+				vista.mostrarMensaje("Por favor, selecciona una pregunta de seguridad.");
+				return;
+			}
+			if (!nuevaPass.equals(confirmPass)) {
+				vista.mostrarMensaje("Las contraseñas no coinciden.");
+				return;
+			}
+			if (!miModelo.existeUsuario(usr)) {
+				vista.mostrarMensaje("El usuario indicado no existe.");
+				return;
+			}
+
+			// Comprobamos en el Modelo si la respuesta es correcta
+			boolean esCorrecta = miModelo.verificarRespuestaSeguridad(usr, idPregunta, respuesta);
+
+			if (esCorrecta) {
+				int filasAfectadas = miModelo.modificar(usr, nuevaPass);
+				if (filasAfectadas > 0) {
+					vista.mostrarMensaje("Contraseña actualizada con éxito. Ya puedes iniciar sesión.");
+					vista.limpiarCampos();
+					cambiarVentana(9, 0); // Volver al login
+				} else {
+					vista.mostrarMensaje("Error al actualizar la contraseña en la base de datos.");
+				}
+			} else {
+				vista.mostrarMensaje("La respuesta a la pregunta de seguridad es incorrecta.");
+			}
+		}
+
+		public void alAbrirPerfil() {
+			_08_PerfilUsuario vista = (_08_PerfilUsuario) misVistas[8];
+			String usr = miModelo.getUsuarioLogueado();
+
+			// 1. Extraemos las estadísticas de la BD
+			int[] stats = miModelo.obtenerEstadisticasUsuario(usr);
+			int puntos = stats[0];
+			int totalActividades = stats[1];
+
+			// 2. Calculamos lógica de negocio (Ej: Sube de nivel cada 500 puntos)
+			int nivel = (puntos / 500) + 1; 
+			int monedas = puntos; // Asumimos que 1 punto = 1 moneda para la tienda
+
+			// 3. Inyectamos los datos en el banner
+			vista.setDatosBanner(usr.toUpperCase(), nivel, monedas, totalActividades);
+
+			// 4. Inyectamos las tablas
+			Object[][] datosLogros = getTablaLogrosPerfil();
+			Object[][] datosInv = getTablaInventarioPerfil();
+			vista.setTablasPerfil(datosLogros, datosInv);
+		}
 
 	// =========================================================================
 	// 4. NOTICIAS Y MISIONES
