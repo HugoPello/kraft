@@ -29,6 +29,7 @@ import Vista._14_CrearActividad;
 import Vista._15_Configuracion;
 import Vista._16_Grupos;
 import Vista._17_CrearGrupo;
+import Vista._13_AjustesUsuario;
 
 public class Controlador {
 
@@ -638,4 +639,54 @@ public class Controlador {
 		vista.mostrarMensaje("Configuración guardada. La conexión se ha reiniciado.");
 		((javax.swing.JFrame) misVistas[16]).dispose();
 	}
+
+	public void guardarAjustes() {
+		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
+		
+		// 1. Recogemos los datos
+		String usrActual = miModelo.getUsuarioLogueado();
+		String nuevoUsr = vista.getNuevoNombre();
+		String nuevoCorreo = vista.getNuevoEmail();
+		String nuevaPwd = vista.getNuevaPass();
+
+		// 2. Validaciones básicas
+		if (nuevoUsr.trim().isEmpty() || nuevoCorreo.trim().isEmpty()) {
+			vista.mostrarMensaje("El nombre de usuario y el correo no pueden estar vacíos.");
+			return;
+		}
+
+		
+		if (!usrActual.equals(nuevoUsr)) {
+			File fotoVieja = new File("perfiles/" + usrActual + ".jpg");
+			if (fotoVieja.exists()) {
+				File fotoNueva = new File("perfiles/" + nuevoUsr + ".jpg");
+				
+				boolean renombrado = fotoVieja.renameTo(fotoNueva);
+				if (!renombrado) {
+					System.err.println("No se pudo renombrar la foto de perfil.");
+				}
+			}
+		}
+		boolean exito = miModelo.actualizarAjustes(usrActual, nuevoUsr, nuevoCorreo, nuevaPwd);
+		
+		if (exito) {
+		
+			miModelo.setUsuarioLogueado(nuevoUsr); 
+			
+			vista.mostrarMensaje("Perfil actualizado correctamente.");
+			vista.setDatosActuales(nuevoUsr, nuevoCorreo);
+			cambiarVentana(14, 8); // Volvemos al perfil
+		} else {
+			vista.mostrarMensaje("Error al actualizar. Es posible que el nombre de usuario ya esté en uso.");
+		}
+	}
+
+	public void alAbrirAjustes() {
+		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
+		String nombre = miModelo.getUsuarioLogueado();
+		String email = miModelo.sacarEmail();
+		vista.setDatosActuales(nombre, email);
+	}
+	
+	
 }

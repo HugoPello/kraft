@@ -1,4 +1,4 @@
-	package Vista;
+package Vista;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -12,10 +12,13 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
@@ -29,7 +32,7 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 	private static final long serialVersionUID = 1L;
 	private JPanel contentPane;
 	private JPanel panelCentral;
-	
+
 	// Colores
 	private final Color NARANJA = new Color(255, 128, 0);
 	private final Color GRIS_FONDO = new Color(25, 25, 25);
@@ -38,6 +41,10 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 	// MVC
 	private Controlador miControlador;
 	private Modelo miModelo;
+
+	private JTextField txtNombre;
+	private JTextField txtEmail;
+	private JPasswordField txtPass;
 
 	public _13_AjustesUsuario() {
 		// CONFIGURACIÓN VENTANA
@@ -55,7 +62,7 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		JPanel header = new JPanel();
 		header.setBackground(new Color(15, 15, 15));
 		header.setPreferredSize(new Dimension(0, 70));
-		header.setLayout(new BorderLayout()); 
+		header.setLayout(new BorderLayout());
 		contentPane.add(header, BorderLayout.NORTH);
 
 		JPanel headerLeft = new JPanel();
@@ -89,9 +96,9 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		// PANEL CENTRAL (Ajustes)
 		panelCentral = new JPanel();
 		panelCentral.setBackground(GRIS_FONDO);
-		panelCentral.setLayout(new GridBagLayout()); 
+		panelCentral.setLayout(new GridBagLayout());
 		contentPane.add(panelCentral, BorderLayout.CENTER);
-		
+
 		// CAJA PRINCIPAL DE AJUSTES
 		JPanel cajaAjustes = new JPanel();
 		cajaAjustes.setBackground(GRIS_RECTANGULO);
@@ -99,13 +106,13 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		cajaAjustes.setPreferredSize(new Dimension(800, 700));
 		cajaAjustes.setLayout(null);
 		panelCentral.add(cajaAjustes);
-		
+
 		JLabel tituloAjustes = new JLabel("⚙ AJUSTES DE PERFIL");
 		tituloAjustes.setFont(new Font("Arial Black", Font.BOLD, 30));
 		tituloAjustes.setForeground(Color.WHITE);
 		tituloAjustes.setBounds(50, 40, 500, 40);
 		cajaAjustes.add(tituloAjustes);
-		
+
 		JPanel linea = new JPanel();
 		linea.setBackground(Color.DARK_GRAY);
 		linea.setBounds(50, 100, 700, 2);
@@ -118,7 +125,7 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		lblNombre.setBounds(50, 130, 300, 30);
 		cajaAjustes.add(lblNombre);
 		
-		JTextField txtNombre = new JTextField("Mohammed");
+		txtNombre = new JTextField();
 		txtNombre.setFont(new Font("Arial", Font.PLAIN, 18));
 		txtNombre.setBounds(50, 165, 500, 40);
 		cajaAjustes.add(txtNombre);
@@ -129,8 +136,8 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		lblEmail.setForeground(Color.LIGHT_GRAY);
 		lblEmail.setBounds(50, 230, 300, 30);
 		cajaAjustes.add(lblEmail);
-		
-		JTextField txtEmail = new JTextField("usuario@correo.com");
+
+		txtEmail = new JTextField();
 		txtEmail.setFont(new Font("Arial", Font.PLAIN, 18));
 		txtEmail.setBounds(50, 265, 500, 40);
 		cajaAjustes.add(txtEmail);
@@ -142,7 +149,7 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		lblPass.setBounds(50, 330, 300, 30);
 		cajaAjustes.add(lblPass);
 		
-		JPasswordField txtPass = new JPasswordField();
+		txtPass = new JPasswordField();
 		txtPass.setFont(new Font("Arial", Font.PLAIN, 18));
 		txtPass.setBounds(50, 365, 500, 40);
 		cajaAjustes.add(txtPass);
@@ -153,7 +160,7 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		lblFoto.setForeground(Color.LIGHT_GRAY);
 		lblFoto.setBounds(50, 430, 300, 30);
 		cajaAjustes.add(lblFoto);
-		
+
 		JButton btnSubirFoto = new JButton("Subir nueva imagen...");
 		btnSubirFoto.setFont(new Font("Arial", Font.PLAIN, 16));
 		btnSubirFoto.setBackground(Color.DARK_GRAY);
@@ -161,7 +168,8 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		btnSubirFoto.setBounds(50, 465, 200, 40);
 		btnSubirFoto.setFocusPainted(false);
 		btnSubirFoto.addActionListener(e -> {
-			if(miControlador != null) miControlador.subirFotoPerfil();
+			if (miControlador != null)
+				miControlador.subirFotoPerfil();
 		});
 		cajaAjustes.add(btnSubirFoto);
 
@@ -172,8 +180,12 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		btnGuardar.setForeground(Color.BLACK);
 		btnGuardar.setBounds(550, 600, 200, 50);
 		btnGuardar.setFocusPainted(false);
+		btnGuardar.addActionListener(e -> {
+			if (miControlador != null)
+				miControlador.guardarAjustes();
+		});
 		cajaAjustes.add(btnGuardar);
-		
+
 		JButton btnVolver = new JButton("VOLVER");
 		btnVolver.setFont(new Font("Arial Black", Font.BOLD, 16));
 		btnVolver.setBackground(Color.GRAY);
@@ -181,13 +193,36 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 		btnVolver.setBounds(330, 600, 200, 50);
 		btnVolver.setFocusPainted(false);
 		cajaAjustes.add(btnVolver);
-		
+
 		// Evento para volver al Perfil
 		btnVolver.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				miControlador.cambiarVentana(14, 8);
 			}
 		});
+	}
+
+	public String getNuevoNombre() {
+		return txtNombre.getText();
+	}
+
+	public String getNuevoEmail() {
+		return txtEmail.getText();
+	}
+
+	public String getNuevaPass() {
+		return new String(txtPass.getPassword());
+	}
+
+	// --- SETTER (Para que el Controlador ponga los datos actuales al abrir) ---
+	public void setDatosActuales(String nombre, String email) {
+		txtNombre.setText(nombre);
+		txtEmail.setText(email != null ? email : "");
+		txtPass.setText(""); // La contraseña se deja vacía por seguridad
+	}
+
+	public void mostrarMensaje(String m) {
+		JOptionPane.showMessageDialog(this, m);
 	}
 
 	// MÉTODOS DE LA INTERFAZ VISTA
@@ -199,5 +234,12 @@ public class _13_AjustesUsuario extends JFrame implements Vista {
 	@Override
 	public void setControlador(Controlador miControlador) {
 		this.miControlador = miControlador;
+		this.addComponentListener(new ComponentAdapter() {
+			@Override
+			public void componentShown(ComponentEvent e) {
+				if (miControlador != null)
+					miControlador.alAbrirAjustes();
+			}
+		});
 	}
 }
