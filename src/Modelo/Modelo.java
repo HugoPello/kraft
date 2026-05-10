@@ -453,9 +453,8 @@ public class Modelo {
 	// 5. GESTIÓN DE ACTIVIDADES, MISIONES Y EVENTOS
 	// =========================================================================
 
-	public boolean crearActividad(String nombre, String tipo, String dificultad, int puntos, String frecuencia,
-			String unidad) {
-		String sql = "INSERT INTO ACTIVIDADES (nombre, tipo, dificultad, puntos, frecuencia, unidad_medida) VALUES (?, ?, ?, ?, ?, ?)";
+	public boolean crearActividad(String nombre, String tipo, String dificultad, int puntos, String frecuencia, String unidad, double meta) {
+		String sql = "INSERT INTO ACTIVIDADES (nombre, tipo, dificultad, puntos, frecuencia, unidad_medida, meta_cantidad) VALUES (?, ?, ?, ?, ?, ?, ?)";
 		try (PreparedStatement pstmt = conexion.prepareStatement(sql)) {
 			pstmt.setString(1, nombre);
 			pstmt.setString(2, tipo);
@@ -463,33 +462,96 @@ public class Modelo {
 			pstmt.setInt(4, puntos);
 			pstmt.setString(5, frecuencia);
 			pstmt.setString(6, unidad);
+			pstmt.setDouble(7, meta);
 			return pstmt.executeUpdate() > 0;
 		} catch (SQLException e) {
 			return false;
 		}
 	}
 
-	public boolean registrarActividadCompletada(String usr, String nombreActividad) {
+	public boolean registrarActividadCompletada(String usr, String nombreActividad, double cantidad) {
 		try {
 			int idActividad = -1;
 			PreparedStatement ps1 = conexion.prepareStatement("SELECT id_actividad FROM ACTIVIDADES WHERE nombre = ?");
 			ps1.setString(1, nombreActividad);
 			ResultSet rs = ps1.executeQuery();
-
-			if (rs.next()) {
-				idActividad = rs.getInt("id_actividad");
-			}
+			if (rs.next()) idActividad = rs.getInt("id_actividad");
+			ps1.close();
 
 			if (idActividad != -1) {
-				PreparedStatement ps2 = conexion.prepareStatement(
-						"INSERT INTO COMPLETAR_ACTIVIDAD (nombreUsuario, id_actividad) VALUES (?, ?)");
+				PreparedStatement ps2 = conexion.prepareStatement("INSERT INTO COMPLETAR_ACTIVIDAD (nombreUsuario, id_actividad, cantidad) VALUES (?, ?, ?)");
 				ps2.setString(1, usr);
 				ps2.setInt(2, idActividad);
+				ps2.setDouble(3, cantidad);
 				return ps2.executeUpdate() > 0;
 			}
-		} catch (SQLException e) {
-		}
+		} catch (SQLException e) { }
 		return false;
+	}
+	
+	public void actualizarProgresoMisiones(String usr, String nombreActividad, double cantidad) {
+		String sql = "UPDATE REALIZA_MISION RM " +
+					 "JOIN MISION_ACTIVIDAD MA ON RM.id_mision = MA.id_mision " +
+					 "JOIN ACTIVIDADES A ON MA.id_actividad = A.id_actividad " +
+					 "SET RM.progreso = RM.progreso + ? " +
+					 "WHERE RM.nombreUsuario = ? AND A.nombre = ? AND RM.fecha_asignacion = CURRENT_DATE";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ps.setDouble(1, cantidad);
+			ps.setString(2, usr);
+			ps.setString(3, nombreActividad);
+			ps.executeUpdate();
+			
+			// Marcar como completada si llegó a la meta
+			String sqlCheck = "UPDATE REALIZA_MISION RM JOIN MISION_ACTIVIDAD MA ON RM.id_mision = MA.id_mision " +
+							  "SET RM.completada = TRUE WHERE RM.nombreUsuario = ? AND RM.fecha_asignacion = CURRENT_DATE AND RM.progreso >= MA.cantidad_requerida";
+			PreparedStatement psCheck = conexion.prepareStatement(sqlCheck);
+			psCheck.setString(1, usr);
+			psCheck.executeUpdate();
+		} catch (SQLException e) { }
+	}
+	public boolean tieneMisionesHoy(String usr) {
+		String sql = "SELECT COUNT(*) FROM REALIZA_MISION WHERE nombreUsuario = ? AND fecha_asignacion = CURRENT_DATE";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ps.setString(1, usr);
+			ResultSet rs = ps.executeQuery();
+			if (rs.next()) return rs.getInt(1) > 0;
+		} catch (SQLException e) {}
+		return false;
+	}
+
+	public void generarMisionesDiarias(String usr) {
+		try {
+			// Insertar 3 Diarias
+			String sqlDiarias = "INSERT INTO REALIZA_MISION (nombreUsuario, id_mision, fecha_asignacion) " +
+								"SELECT ?, id_mision, CURRENT_DATE FROM MISIONES WHERE tipo = 'Diaria' ORDER BY RAND() LIMIT 3";
+			PreparedStatement ps1 = conexion.prepareStatement(sqlDiarias);
+			ps1.setString(1, usr);
+			ps1.executeUpdate();
+			
+			// Insertar 1 Semanal
+			String sqlSemanales = "INSERT INTO REALIZA_MISION (nombreUsuario, id_mision, fecha_asignacion) " +
+								  "SELECT ?, id_mision, CURRENT_DATE FROM MISIONES WHERE tipo = 'Semanal' ORDER BY RAND() LIMIT 1";
+			PreparedStatement ps2 = conexion.prepareStatement(sqlSemanales);
+			ps2.setString(1, usr);
+			ps2.executeUpdate();
+		} catch (SQLException e) { System.err.println("Error generando misiones: " + e.getMessage()); }
+	}
+
+	public ArrayList<Object[]> obtenerMisionesHoy(String usr, String tipo) {
+		ArrayList<Object[]> lista = new ArrayList<>();
+		String sql = "SELECT M.descripcion, RM.progreso, M.recompensa, RM.completada " +
+					 "FROM MISIONES M JOIN REALIZA_MISION RM ON M.id_mision = RM.id_mision " +
+					 "WHERE RM.nombreUsuario = ? AND M.tipo = ? AND RM.fecha_asignacion = CURRENT_DATE";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ps.setString(1, usr);
+			ps.setString(2, tipo);
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				String estado = rs.getBoolean("completada") ? "✅ HECHA" : "Progreso: " + rs.getDouble("progreso");
+				lista.add(new Object[] { rs.getString("descripcion"), estado, rs.getInt("recompensa") + " EXP" });
+			}
+		} catch (SQLException e) {}
+		return lista;
 	}
 
 	public ArrayList<Object[]> obtenerMisiones(String tipoMision) {

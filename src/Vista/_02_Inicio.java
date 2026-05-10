@@ -73,7 +73,6 @@ public class _02_Inicio extends JFrame implements Vista {
 		panelBotonesHeader.add(crearBotonIcono("🏆", 6)); // Ranking (_06_Ranking)
 		panelBotonesHeader.add(crearBotonIcono("⚙", 11)); // Panel Admin / Ajustes
 
-
 		panelBotonesHeader.add(Box.createHorizontalStrut(20));
 		panelBotonesHeader.add(crearBotonControl("-", Color.GRAY, e -> setState(JFrame.ICONIFIED)));
 		panelBotonesHeader.add(crearBotonControl("X", new Color(220, 40, 40), e -> System.exit(0)));
@@ -105,12 +104,18 @@ public class _02_Inicio extends JFrame implements Vista {
 		rectDerecho.setBorder(new EmptyBorder(15, 15, 15, 15));
 
 		// Inicializamos los modelos que declaramos como atributos de clase
-		modeloDiarias = new DefaultTableModel(null, new String[] { "Misión", "Recompensa" }) {
-		    @Override public boolean isCellEditable(int r, int c) { return false; }
+		modeloDiarias = new DefaultTableModel(null, new String[] { "Misión", "Estado", "Recompensa" }) {
+			@Override
+			public boolean isCellEditable(int r, int c) {
+				return false;
+			}
 		};
 
-		modeloSemanales = new DefaultTableModel(null, new String[] { "Misión", "Recompensa" }) {
-		    @Override public boolean isCellEditable(int r, int c) { return false; }
+		modeloSemanales = new DefaultTableModel(null, new String[] { "Misión", "Estado", "Recompensa" }) {
+			@Override
+			public boolean isCellEditable(int r, int c) {
+				return false;
+			}
 		};
 
 		// Añadimos los componentes al panel
@@ -120,18 +125,18 @@ public class _02_Inicio extends JFrame implements Vista {
 		rectDerecho.add(crearLabelSeccion("MISIONES SEMANALES"));
 		rectDerecho.add(crearScrollMision(modeloSemanales));
 		panelCentral.add(rectDerecho);
-		
-		this.addWindowListener(new WindowAdapter() {
-	        @Override
-	        public void windowOpened(WindowEvent e) {
-	            // Este código solo se ejecuta cuando la ventana se vuelve visible
-	            if (miControlador != null) {
-	                cargarNoticias();
-	        		cargarMisiones();
 
-	            }
-	        }
-	    });
+		this.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowOpened(WindowEvent e) {
+				// Este código solo se ejecuta cuando la ventana se vuelve visible
+				if (miControlador != null) {
+					cargarNoticias();
+					miControlador.gestionarMisionesDiarias();
+
+				}
+			}
+		});
 	}
 
 	private JButton crearBotonIcono(String icono, int ventanaDestino) {
@@ -204,55 +209,51 @@ public class _02_Inicio extends JFrame implements Vista {
 	}
 
 	private JScrollPane crearScrollMision(DefaultTableModel modelo) {
-	    JTable tabla = new JTable(modelo); // Usamos el modelo pasado por parámetro
-	    tabla.setBackground(new Color(60, 60, 60));
-	    tabla.setForeground(Color.WHITE);
-	    tabla.setRowHeight(40);
-	    tabla.setShowGrid(false); // Para seguir la estética de las noticias
+		JTable tabla = new JTable(modelo); // Usamos el modelo pasado por parámetro
+		tabla.setBackground(new Color(60, 60, 60));
+		tabla.setForeground(Color.WHITE);
+		tabla.setRowHeight(40);
+		tabla.setShowGrid(false); // Para seguir la estética de las noticias
 
-	    JScrollPane scroll = new JScrollPane(tabla);
-	    scroll.setPreferredSize(new Dimension(0, 250));
-	    scroll.setBorder(null);
-	    scroll.getViewport().setBackground(new Color(60, 60, 60));
-	    return scroll;
+		JScrollPane scroll = new JScrollPane(tabla);
+		scroll.setPreferredSize(new Dimension(0, 250));
+		scroll.setBorder(null);
+		scroll.getViewport().setBackground(new Color(60, 60, 60));
+		return scroll;
 	}
 
 	@Override
 	public void setModelo(Modelo miModelo) {
 		this.miModelo = miModelo;
 	}
-	
-	public void cargarNoticias() {
-	    // Pedimos los datos al controlador
-	    ArrayList<Object[]> datos = miControlador.getNoticias();
-	    
-	    modeloNoticias.setRowCount(0); 
-	    
-	    for (Object[] fila : datos) {
-	        modeloNoticias.addRow(fila);
-	    }
-	}
-	
-	public void cargarMisiones() {
-	    if (miControlador != null) {
-	        // Cargar Diarias usando el atributo de clase modeloDiarias
-	        ArrayList<Object[]> diarias = miControlador.getMisiones("Diaria");
-	        if (diarias != null) {
-	            modeloDiarias.setRowCount(0);
-	            for (Object[] fila : diarias) {
-	                modeloDiarias.addRow(fila);
-	            }
-	        }
 
-	        // Cargar Semanales usando el atributo de clase modeloSemanales
-	        ArrayList<Object[]> semanales = miControlador.getMisiones("Semanal");
-	        if (semanales != null) {
-	            modeloSemanales.setRowCount(0);
-	            for (Object[] fila : semanales) {
-	                modeloSemanales.addRow(fila);
-	            }
-	        }
-	    }
+	public void cargarNoticias() {
+		// Pedimos los datos al controlador
+		ArrayList<Object[]> datos = miControlador.getNoticias();
+
+		modeloNoticias.setRowCount(0);
+
+		for (Object[] fila : datos) {
+			modeloNoticias.addRow(fila);
+		}
+	}
+
+	public void cargarMisiones() {
+		if (miModelo != null && miModelo.getUsuarioLogueado() != null) {
+			String usr = miModelo.getUsuarioLogueado();
+
+			// Cargar Diarias
+			ArrayList<Object[]> diarias = miModelo.obtenerMisionesHoy(usr, "Diaria");
+			modeloDiarias.setRowCount(0);
+			for (Object[] fila : diarias)
+				modeloDiarias.addRow(fila);
+
+			// Cargar Semanales
+			ArrayList<Object[]> semanales = miModelo.obtenerMisionesHoy(usr, "Semanal");
+			modeloSemanales.setRowCount(0);
+			for (Object[] fila : semanales)
+				modeloSemanales.addRow(fila);
+		}
 	}
 
 	@Override

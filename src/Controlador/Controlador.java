@@ -186,7 +186,7 @@ public class Controlador {
 	public int modificarUsuario(String usr, String pwd) {
 		return miModelo.modificar(usr, pwd);
 	}
-	
+
 	// =========================================================================
 	// GESTIÓN DE FICHEROS (FOTO DE PERFIL)
 	// =========================================================================
@@ -194,8 +194,7 @@ public class Controlador {
 	public void subirFotoPerfil() {
 		// 1. Abrir explorador de archivos de Windows
 		JFileChooser chooser = new JFileChooser();
-		FileNameExtensionFilter filter = new FileNameExtensionFilter(
-				"Imágenes (JPG, PNG)", "jpg", "jpeg", "png");
+		FileNameExtensionFilter filter = new FileNameExtensionFilter("Imágenes (JPG, PNG)", "jpg", "jpeg", "png");
 		chooser.setFileFilter(filter);
 
 		int seleccion = chooser.showOpenDialog(null);
@@ -213,20 +212,16 @@ public class Controlador {
 
 				// 3. Copiar la imagen y llamarla como el usuario (ej: perfiles/Ivan.jpg)
 				File archivoDestino = new File("perfiles/" + usr + ".jpg");
-				Files.copy(archivoOrigen.toPath(), archivoDestino.toPath(),
-						StandardCopyOption.REPLACE_EXISTING);
+				Files.copy(archivoOrigen.toPath(), archivoDestino.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
 				JOptionPane.showMessageDialog(null, "¡Foto de perfil actualizada con éxito!");
 
 			} catch (Exception e) {
 				System.err.println("Error al guardar fichero: " + e.getMessage());
-				JOptionPane.showMessageDialog(null, "Error al guardar la imagen.", "Error",
-						JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(null, "Error al guardar la imagen.", "Error", JOptionPane.ERROR_MESSAGE);
 			}
 		}
 	}
-	
-	
 
 	// =========================================================================
 	// 8. RECUPERACIÓN DE CONTRASEÑA Y PERFIL
@@ -295,11 +290,12 @@ public class Controlador {
 		Object[][] datosLogros = getTablaLogrosPerfil();
 		Object[][] datosInv = getTablaInventarioPerfil();
 		vista.setTablasPerfil(datosLogros, datosInv);
-		
+
 		File fotoFile = new File("perfiles/" + usr + ".jpg");
 		if (fotoFile.exists()) {
 			try {
-				// Leemos la imagen y la escalamos para que encaje perfecta en el cuadro de 120x120
+				// Leemos la imagen y la escalamos para que encaje perfecta en el cuadro de
+				// 120x120
 				BufferedImage imgOriginal = ImageIO.read(fotoFile);
 				Image imgEscalada = imgOriginal.getScaledInstance(120, 120, Image.SCALE_SMOOTH);
 				vista.setImagenPerfil(new ImageIcon(imgEscalada));
@@ -397,6 +393,17 @@ public class Controlador {
 		String sql = "SELECT C.nombre, C.tipo_personalizacion " + "FROM COSMETICOS C "
 				+ "JOIN TIENE_COSMETICO TC ON C.id_cosmetico = TC.id_cosmetico " + "WHERE TC.nombreUsuario = ?";
 		return miModelo.obtenerDatosTabla(sql, 2, usr);
+	}
+	
+	public void gestionarMisionesDiarias() {
+		String usr = miModelo.getUsuarioLogueado();
+		if (usr != null && !miModelo.tieneMisionesHoy(usr)) {
+			miModelo.generarMisionesDiarias(usr);
+		}
+		
+		// Inyectamos las misiones actualizadas en la vista 02
+		_02_Inicio vista = (_02_Inicio) misVistas[2];
+		vista.cargarMisiones();
 	}
 
 	// =========================================================================
@@ -592,19 +599,20 @@ public class Controlador {
 		int pts = vistaCrear.getPuntosActividad();
 		String frec = vistaCrear.getFrecuenciaActividad();
 		String unidad = vistaCrear.getUnidadActividad();
+		double cantidad = vistaCrear.getCantidadMeta(); // Recogemos la cantidad
 
 		if (nombre == null || nombre.trim().isEmpty()) {
-			vistaCrear.mostrarMensaje("Error: El nombre de la actividad no puede estar vacío.");
+			vistaCrear.mostrarMensaje("Error: El nombre es obligatorio.");
 			return;
 		}
 
-		boolean exito = miModelo.crearActividad(nombre, tipo, dif, pts, frec, unidad);
+		boolean exito = miModelo.crearActividad(nombre, tipo, dif, pts, frec, unidad, cantidad);
 		if (exito) {
 			vistaCrear.mostrarMensaje("¡Actividad '" + nombre + "' creada correctamente!");
 			vistaCrear.limpiarFormulario();
 			cambiarVentana(14, 3);
 		} else {
-			vistaCrear.mostrarMensaje("Error en la Base de Datos. No se pudo crear la actividad.");
+			vistaCrear.mostrarMensaje("Error en la Base de Datos al crear actividad.");
 		}
 	}
 
@@ -613,18 +621,34 @@ public class Controlador {
 		String actividadElegida = vista4.getActividadSeleccionada();
 
 		if (actividadElegida == null) {
-			vista4.mostrarMensaje("Por favor, selecciona una actividad de la tabla derecha primero.");
+			vista4.mostrarMensaje("Por favor, selecciona una actividad primero.");
 			return;
 		}
 
-		String usr = miModelo.getUsuarioLogueado();
-		boolean exito = miModelo.registrarActividadCompletada(usr, actividadElegida);
+		// Pop-up para pedir la cantidad
+		String input = javax.swing.JOptionPane.showInputDialog(null,
+				"¿Qué cantidad de '" + actividadElegida + "' has realizado?", "Registrar Progreso",
+				javax.swing.JOptionPane.QUESTION_MESSAGE);
 
-		if (exito) {
-			vista4.mostrarMensaje("¡Enhorabuena! Has completado: " + actividadElegida);
-			vista4.cargarDatosTablas();
-		} else {
-			vista4.mostrarMensaje("Hubo un error al registrar la actividad.");
+		if (input != null && !input.trim().isEmpty()) {
+			try {
+				double cantidad = Double.parseDouble(input.replace(",", "."));
+				String usr = miModelo.getUsuarioLogueado();
+
+				// 1. Registramos la actividad en el historial
+				boolean exito = miModelo.registrarActividadCompletada(usr, actividadElegida, cantidad);
+
+				if (exito) {
+					// 2. Sumamos al motor de misiones
+					miModelo.actualizarProgresoMisiones(usr, actividadElegida, cantidad);
+					vista4.mostrarMensaje("¡Enhorabuena! Has completado: " + cantidad + " de " + actividadElegida);
+					vista4.cargarDatosTablas();
+				} else {
+					vista4.mostrarMensaje("Hubo un error al registrar la actividad.");
+				}
+			} catch (NumberFormatException e) {
+				vista4.mostrarMensaje("Por favor, introduce un número válido.");
+			}
 		}
 	}
 
@@ -642,7 +666,7 @@ public class Controlador {
 
 	public void guardarAjustes() {
 		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
-		
+
 		// 1. Recogemos los datos
 		String usrActual = miModelo.getUsuarioLogueado();
 		String nuevoUsr = vista.getNuevoNombre();
@@ -655,12 +679,11 @@ public class Controlador {
 			return;
 		}
 
-		
 		if (!usrActual.equals(nuevoUsr)) {
 			File fotoVieja = new File("perfiles/" + usrActual + ".jpg");
 			if (fotoVieja.exists()) {
 				File fotoNueva = new File("perfiles/" + nuevoUsr + ".jpg");
-				
+
 				boolean renombrado = fotoVieja.renameTo(fotoNueva);
 				if (!renombrado) {
 					System.err.println("No se pudo renombrar la foto de perfil.");
@@ -668,11 +691,11 @@ public class Controlador {
 			}
 		}
 		boolean exito = miModelo.actualizarAjustes(usrActual, nuevoUsr, nuevoCorreo, nuevaPwd);
-		
+
 		if (exito) {
-		
-			miModelo.setUsuarioLogueado(nuevoUsr); 
-			
+
+			miModelo.setUsuarioLogueado(nuevoUsr);
+
 			vista.mostrarMensaje("Perfil actualizado correctamente.");
 			vista.setDatosActuales(nuevoUsr, nuevoCorreo);
 			cambiarVentana(14, 8); // Volvemos al perfil
@@ -687,6 +710,5 @@ public class Controlador {
 		String email = miModelo.sacarEmail();
 		vista.setDatosActuales(nombre, email);
 	}
-	
-	
+
 }
