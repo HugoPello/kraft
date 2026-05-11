@@ -577,10 +577,15 @@ public class Controlador {
 	public Object[][] getTablaActividadesPorTipo() {
 		String tipo = miModelo.getTipoActividadSeleccionada();
 		String usr = miModelo.getUsuarioLogueado();
-		String sql = "SELECT A.nombre, A.dificultad " + "FROM ACTIVIDADES A " + "WHERE A.tipo = ? "
-				+ "AND A.id_actividad NOT IN (" + "    SELECT CA.id_actividad " + "    FROM COMPLETAR_ACTIVIDAD CA "
-				+ "    WHERE CA.nombreUsuario = ?" + ")";
-		return miModelo.obtenerDatosTabla(sql, 2, tipo, usr);
+		
+		// Esta súper-consulta calcula cuánto lleva hecho el usuario de cada actividad y muestra la recompensa
+		String sql = "SELECT A.nombre, A.dificultad, " +
+					 "CONCAT(IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0), ' / ', A.meta_cantidad, ' ', A.unidad_medida), " +
+					 "CONCAT(A.puntos, ' 💰') " +
+					 "FROM ACTIVIDADES A WHERE A.tipo = ?";
+					 
+		// Le pasamos 4 como número de columnas, y los parámetros (usr, tipo)
+		return miModelo.obtenerDatosTabla(sql, 4, usr, tipo);
 	}
 
 	public Object[][] getTablaHistorialUsuario() {

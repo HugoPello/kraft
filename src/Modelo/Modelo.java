@@ -453,6 +453,33 @@ public class Modelo {
 	// 5. GESTIÓN DE ACTIVIDADES, MISIONES Y EVENTOS
 	// =========================================================================
 
+	public int getPorcentajeCategoria(String usr, String tipo) {
+		String sqlHechas = "SELECT COUNT(DISTINCT CA.id_actividad) FROM COMPLETAR_ACTIVIDAD CA JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad WHERE CA.nombreUsuario = ? AND A.tipo = ?";
+		String sqlTotal = "SELECT COUNT(*) FROM ACTIVIDADES WHERE tipo = ?";
+		try {
+			int hechas = 0, total = 0;
+
+			PreparedStatement ps1 = conexion.prepareStatement(sqlHechas);
+			ps1.setString(1, usr);
+			ps1.setString(2, tipo);
+			ResultSet rs1 = ps1.executeQuery();
+			if (rs1.next())
+				hechas = rs1.getInt(1);
+
+			PreparedStatement ps2 = conexion.prepareStatement(sqlTotal);
+			ps2.setString(1, tipo);
+			ResultSet rs2 = ps2.executeQuery();
+			if (rs2.next())
+				total = rs2.getInt(1);
+
+			if (total == 0)
+				return 0;
+			return (int) ((hechas * 100.0) / total);
+		} catch (SQLException e) {
+			return 0;
+		}
+	}
+
 	public boolean crearActividad(String nombre, String tipo, String dificultad, int puntos, String frecuencia,
 			String unidad, double meta) {
 		try {
@@ -564,12 +591,39 @@ public class Modelo {
 				System.out.println("Progreso sumado correctamente en BD.");
 			}
 
-			// Marcar como completada si llegó a la meta
-			String sqlCheck = "UPDATE REALIZA_MISION RM JOIN MISION_ACTIVIDAD MA ON RM.id_mision = MA.id_mision "
-					+ "SET RM.completada = TRUE WHERE RM.nombreUsuario = ? AND RM.fecha_asignacion = CURRENT_DATE AND RM.progreso >= MA.cantidad_requerida";
-			PreparedStatement psCheck = conexion.prepareStatement(sqlCheck);
-			psCheck.setString(1, usr);
-			psCheck.executeUpdate();
+			String sqlComprobar = "SELECT RM.id_mision, M.recompensa " + "FROM REALIZA_MISION RM "
+					+ "JOIN MISION_ACTIVIDAD MA ON RM.id_mision = MA.id_mision "
+					+ "JOIN MISIONES M ON RM.id_mision = M.id_mision "
+					+ "WHERE RM.nombreUsuario = ? AND RM.fecha_asignacion = CURRENT_DATE "
+					+ "AND RM.completada = FALSE AND RM.progreso >= MA.cantidad_requerida";
+
+			PreparedStatement psComprobar = conexion.prepareStatement(sqlComprobar);
+			psComprobar.setString(1, usr);
+			ResultSet rsMisionesHechas = psComprobar.executeQuery();
+
+			// 2. Por cada misión completada, sumamos los puntos al usuario y la marcamos
+			// como TRUE
+			while (rsMisionesHechas.next()) {
+				int idMis = rsMisionesHechas.getInt("id_mision");
+				int xpGanada = rsMisionesHechas.getInt("recompensa");
+
+				// Dar puntos y monedas al usuario
+				PreparedStatement psPremio = conexion.prepareStatement(
+						"UPDATE USERS SET puntos = puntos + ?, monedas_tienda = monedas_tienda + ? WHERE USR = ?");
+				psPremio.setInt(1, xpGanada);
+				psPremio.setInt(2, xpGanada);
+				psPremio.setString(3, usr);
+				psPremio.executeUpdate();
+
+				// Sellar la misión como completada
+				PreparedStatement psSellar = conexion.prepareStatement(
+						"UPDATE REALIZA_MISION SET completada = TRUE WHERE nombreUsuario = ? AND id_mision = ? AND fecha_asignacion = CURRENT_DATE");
+				psSellar.setString(1, usr);
+				psSellar.setInt(2, idMis);
+				psSellar.executeUpdate();
+
+				System.out.println("¡Misión completada! + " + xpGanada + " EXP otorgada a " + usr);
+			}
 
 		} catch (SQLException e) {
 			// ¡MUY IMPORTANTE IMPRIMIR EL ERROR!

@@ -214,10 +214,12 @@ public class _04_DentroActividad extends JFrame implements Vista {
 	}
 
 	public void cargarDatosTablas() {
-		// 1. Llenar tabla disponibles por filtro
+		// 1. Llenar tabla disponibles con nueva información
 		Object[][] datosFiltrados = miControlador.getTablaActividadesPorTipo();
-		tablaDisponibles.setModel(
-				new DefaultTableModel(datosFiltrados, new String[] { "ACTIVIDADES DISPONIBLES", "DIFICULTAD" }));
+		tablaDisponibles.setModel(new DefaultTableModel(
+				datosFiltrados, 
+				new String[] { "ACTIVIDAD", "DIF.", "PROGRESO / META", "RECOMPENSA" }
+		));
 
 		// 2. Llenar tabla historial
 		Object[][] datosHistorial = miControlador.getTablaHistorialUsuario();
