@@ -80,7 +80,6 @@ public class Modelo {
 				conexion.close();
 			}
 
-
 		} catch (Exception ex) {
 			System.err.println("Error al actualizar y conectar: " + ex.getMessage());
 		}
@@ -145,6 +144,27 @@ public class Modelo {
 
 	public boolean esUsuarioAdmin() {
 		return this.ROL;
+	}
+
+	public String sacarEmail() {
+		String email = "";
+		String usr = getUsuarioLogueado();
+		String query = "SELECT correo FROM USERS WHERE USR = ?";
+		
+		try {
+			PreparedStatement pstmt = conexion.prepareStatement(query);
+			pstmt.setString(1, usr);
+			ResultSet rset = pstmt.executeQuery();
+			
+			if(rset.next()){
+				email = rset.getString("correo"); 
+			}
+			pstmt.close();
+		} catch(Exception e) {
+			System.err.println("Error al sacar email: " + e.getMessage());
+		}
+		
+		return email;
 	}
 
 	// =========================================================================
@@ -221,35 +241,36 @@ public class Modelo {
 	// =========================================================================
 
 	public void loginSeguro(String usr, String pwd) {
-        // Pon el nombre de la tabla EXACTAMENTE igual que lo creaste en Aiven (por ej. USERS)
-        String query = "SELECT * FROM USERS WHERE USR=? AND PWD=?";
-        try {
-            PreparedStatement pstmt = conexion.prepareStatement(query);
-            pstmt.setString(1, usr);
-            pstmt.setString(2, pwd);
-            ResultSet rset = pstmt.executeQuery();
+		// Pon el nombre de la tabla EXACTAMENTE igual que lo creaste en Aiven (por ej.
+		// USERS)
+		String query = "SELECT * FROM USERS WHERE USR=? AND PWD=?";
+		try {
+			PreparedStatement pstmt = conexion.prepareStatement(query);
+			pstmt.setString(1, usr);
+			pstmt.setString(2, pwd);
+			ResultSet rset = pstmt.executeQuery();
 
-            if (rset.next()) {
-                resultado = "Correcto";
-                this.ROL = rset.getBoolean("ROL");
-                this.fallos = 0;
-            } else {
-                fallos++;
-                resultado = (fallos == 3) ? "Cerrar" : "Incorrecto";
-            }
-        } catch (SQLException e) {
-            System.err.println("=== ERROR SQL EN LOGIN ===");
-            e.printStackTrace(); // Esto te dirá el fallo real (tabla no existe, etc)
-            resultado = "ErrorBD"; // Blindamos el resultado para que no sea null
-        }
-    }
+			if (rset.next()) {
+				resultado = "Correcto";
+				this.ROL = rset.getBoolean("ROL");
+				this.fallos = 0;
+			} else {
+				fallos++;
+				resultado = (fallos == 3) ? "Cerrar" : "Incorrecto";
+			}
+		} catch (SQLException e) {
+			System.err.println("=== ERROR SQL EN LOGIN ===");
+			e.printStackTrace(); // Esto te dirá el fallo real (tabla no existe, etc)
+			resultado = "ErrorBD"; // Blindamos el resultado para que no sea null
+		}
+	}
 
 	public boolean registroCompleto(String usr, String pwd, boolean rol, String fechaNac, int idPregunta,
 			String respuesta) {
 		try {
 			conexion.setAutoCommit(false);
 
-			String query1 = "INSERT INTO users (USR, PWD, ROL, fechaNacimiento) VALUES (?, ?, ?, ?)";
+			String query1 = "INSERT INTO USERS (USR, PWD, ROL, fechaNacimiento) VALUES (?, ?, ?, ?)";
 			PreparedStatement ps1 = conexion.prepareStatement(query1);
 			ps1.setString(1, usr);
 			ps1.setString(2, pwd);
@@ -262,7 +283,7 @@ public class Modelo {
 			}
 			ps1.executeUpdate();
 
-			String query2 = "INSERT INTO responde_pregunta (nombreUsuario, id_pregunta, respuesta_texto) VALUES (?, ?, ?)";
+			String query2 = "INSERT INTO RESPONDE_PREGUNTA (nombreUsuario, id_pregunta, respuesta_texto) VALUES (?, ?, ?)";
 			PreparedStatement ps2 = conexion.prepareStatement(query2);
 			ps2.setString(1, usr);
 			ps2.setInt(2, idPregunta);
@@ -288,7 +309,7 @@ public class Modelo {
 	}
 
 	public boolean existeUsuario(String usr) {
-		String query = "SELECT USR FROM users WHERE USR = ?";
+		String query = "SELECT USR FROM USERS WHERE USR = ?";
 		try (PreparedStatement pstmt = conexion.prepareStatement(query)) {
 			pstmt.setString(1, usr);
 			ResultSet rs = pstmt.executeQuery();
@@ -299,7 +320,7 @@ public class Modelo {
 	}
 
 	public int modificar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE users SET PWD = ? WHERE USR = ?")) {
+		try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE USERS SET PWD = ? WHERE USR = ?")) {
 			pstmt.setString(1, pwd);
 			pstmt.setString(2, usr);
 			return pstmt.executeUpdate();
@@ -309,7 +330,7 @@ public class Modelo {
 	}
 
 	public int borrar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM users WHERE usr = ? AND pwd=?")) {
+		try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM USERS WHERE usr = ? AND pwd=?")) {
 			pstmt.setString(1, usr);
 			pstmt.setString(2, pwd);
 			return pstmt.executeUpdate();
@@ -320,7 +341,7 @@ public class Modelo {
 
 	public ArrayList<Object[]> obtenerDatosUsuarios() {
 		ArrayList<Object[]> listaUsuarios = new ArrayList<>();
-		try (PreparedStatement pstmt = conexion.prepareStatement("SELECT USR, PWD FROM users");
+		try (PreparedStatement pstmt = conexion.prepareStatement("SELECT USR, PWD FROM USERS");
 				ResultSet rs = pstmt.executeQuery()) {
 
 			while (rs.next()) {
@@ -332,13 +353,98 @@ public class Modelo {
 	}
 
 	public boolean insertarUsuarioAdmin(String usr, String pwd) {
-		String query = "INSERT INTO users (USR, PWD, ROL) VALUES (?, ?, ?)";
+		String query = "INSERT INTO USERS (USR, PWD, ROL) VALUES (?, ?, ?)";
 		try (PreparedStatement ps = conexion.prepareStatement(query)) {
 			ps.setString(1, usr);
 			ps.setString(2, pwd);
 			ps.setBoolean(3, false);
 			return ps.executeUpdate() > 0;
 		} catch (SQLException e) {
+			return false;
+		}
+	}
+
+	// --- MÉTODOS PARA RECUPERACIÓN DE CONTRASEÑA Y PERFIL ---
+
+	// Verifica si la respuesta secreta coincide con la de la BD
+	public boolean verificarRespuestaSeguridad(String usr, int idPregunta, String respuesta) {
+		// OJO con las mayúsculas/minúsculas de tus tablas en Aiven.
+		String sql = "SELECT respuesta_texto FROM RESPONDE_PREGUNTA WHERE nombreUsuario = ? AND id_pregunta = ?";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ps.setString(1, usr);
+			ps.setInt(2, idPregunta);
+			ResultSet rs = ps.executeQuery();
+			if (rs.next()) {
+				String respReal = rs.getString("respuesta_texto");
+				// equalsIgnoreCase para que no importe si pone "Madrid" o "madrid"
+				return respReal.equalsIgnoreCase(respuesta.trim());
+			}
+		} catch (SQLException e) {
+			System.err.println("Error verificando seguridad: " + e.getMessage());
+		}
+		return false;
+	}
+
+	// Obtiene [puntos, total_actividades_completadas]
+	public int[] obtenerEstadisticasUsuario(String usr) {
+		int[] stats = new int[] { 0, 0 };
+		String sqlPuntos = "SELECT puntos FROM USERS WHERE USR = ?";
+		String sqlActividades = "SELECT COUNT(*) FROM COMPLETAR_ACTIVIDAD WHERE nombreUsuario = ?";
+
+		try {
+			// 1. Obtener Puntos
+			PreparedStatement ps1 = conexion.prepareStatement(sqlPuntos);
+			ps1.setString(1, usr);
+			ResultSet rs1 = ps1.executeQuery();
+			if (rs1.next())
+				stats[0] = rs1.getInt(1);
+			ps1.close();
+
+			// 2. Obtener Actividades Completadas
+			PreparedStatement ps2 = conexion.prepareStatement(sqlActividades);
+			ps2.setString(1, usr);
+			ResultSet rs2 = ps2.executeQuery();
+			if (rs2.next())
+				stats[1] = rs2.getInt(1);
+			ps2.close();
+		} catch (SQLException e) {
+			System.err.println("Error sacando estadisticas: " + e.getMessage());
+		}
+		return stats;
+	}
+	
+	public boolean actualizarAjustes(String usrActual, String nuevoUsr, String nuevoCorreo, String nuevaPwd) {
+		// 1. Empezamos a construir la query básica (Nombre y Correo)
+		StringBuilder sql = new StringBuilder("UPDATE USERS SET USR = ?, correo = ?");
+		
+		// 2. Comprobamos si el usuario ha escrito una nueva contraseña
+		boolean cambiarPwd = (nuevaPwd != null && !nuevaPwd.trim().isEmpty());
+		
+		if (cambiarPwd) {
+			sql.append(", PWD = ?"); // Añadimos la columna de la contraseña
+		}
+		
+		// 3. Añadimos el final de la query
+		sql.append(" WHERE USR = ?");
+
+		try {
+			java.sql.PreparedStatement ps = conexion.prepareStatement(sql.toString());
+			ps.setString(1, nuevoUsr);
+			ps.setString(2, nuevoCorreo);
+			
+			// 4. Asignamos los parámetros dependiendo de si hay contraseña o no
+			if (cambiarPwd) {
+				ps.setString(3, nuevaPwd);
+				ps.setString(4, usrActual);
+			} else {
+				// Si no hay contraseña, el parámetro 3 pasa a ser el usrActual del WHERE
+				ps.setString(3, usrActual); 
+			}
+			
+			return ps.executeUpdate() > 0;
+			
+		} catch (java.sql.SQLException e) {
+			System.err.println("Error al actualizar perfil: " + e.getMessage());
 			return false;
 		}
 	}
@@ -524,7 +630,8 @@ public class Modelo {
 
 	// Permite a un usuario abandonar un grupo
 	public boolean abandonarGrupo(String usr, String nombreGrupo) {
-		// Hacemos el DELETE usando una subconsulta para encontrar el id_grupo por su nombre
+		// Hacemos el DELETE usando una subconsulta para encontrar el id_grupo por su
+		// nombre
 		String sql = "DELETE FROM PERTENECE_GRUPO WHERE nombreUsuario = ? AND id_grupo = (SELECT id_grupo FROM GRUPO WHERE nombre = ?)";
 		try (java.sql.PreparedStatement ps = conexion.prepareStatement(sql)) {
 			ps.setString(1, usr);

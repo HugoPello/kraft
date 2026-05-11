@@ -146,13 +146,9 @@ public class _09_OlvidoContraseña extends JFrame implements Vista {
 		panelCentral.add(lblPregunta);
 
 		cbxPregunta = new JComboBox<String>();
-		cbxPregunta.setModel(new DefaultComboBoxModel<String>(new String[] {
-				"--Seleccione una opción--", 
-				"¿Cuál es el nombre de tu madre?", 
-				"¿Cuál es el nombre de tu padre?", 
-				"¿Cuál es el nombre de tu primera mascota?", 
-				"¿Cuál fue tu primer colegio?"
-		}));
+		cbxPregunta.setModel(new DefaultComboBoxModel<String>(new String[] { "--Seleccione una opción--",
+				"¿Cuál es el nombre de tu madre?", "¿Cuál es el nombre de tu padre?",
+				"¿Cuál es el nombre de tu primera mascota?", "¿Cuál fue tu primer colegio?" }));
 		cbxPregunta.setBounds(799, 290, 250, 25);
 		panelCentral.add(cbxPregunta);
 
@@ -196,7 +192,10 @@ public class _09_OlvidoContraseña extends JFrame implements Vista {
 		panelCentral.add(btnVolver);
 
 		JButton btnRContraseña = new JButton("Cambiar contraseña");
-		btnRContraseña.addActionListener(e -> miControlador.cambiarVentana(9, 0));
+		btnRContraseña.addActionListener(e -> {
+			if (miControlador != null)
+				miControlador.restablecerContrasena();
+		});
 		btnRContraseña.setForeground(Color.BLACK);
 		btnRContraseña.setFont(new Font("Arial Black", Font.PLAIN, 14));
 		btnRContraseña.setBounds(810, 520, 240, 40);
@@ -229,15 +228,57 @@ public class _09_OlvidoContraseña extends JFrame implements Vista {
 		boton.setFocusPainted(false);
 		boton.addMouseListener(new MouseAdapter() {
 			@Override
-			public void mouseEntered(MouseEvent e) { boton.setBackground(colorHover); }
+			public void mouseEntered(MouseEvent e) {
+				boton.setBackground(colorHover);
+			}
+
 			@Override
-			public void mouseExited(MouseEvent e) { boton.setBackground(new Color(15, 15, 15)); }
+			public void mouseExited(MouseEvent e) {
+				boton.setBackground(new Color(15, 15, 15));
+			}
 		});
 	}
 
-	@Override
-	public void setModelo(Modelo miModelo) { this.miModelo = miModelo; }
+	// --- GETTERS Y SETTERS PARA EL CONTROLADOR ---
+	public String getUsuario() {
+		return txtUsu.getText();
+	}
+
+	public int getIndicePregunta() {
+		return cbxPregunta.getSelectedIndex();
+	}
+
+	public String getRespuestaSeguridad() {
+		return txtRes.getText();
+	}
+
+	public String getNuevaPass() {
+		return txtNuevaPass.getText();
+	}
+
+	public String getConfirmPass() {
+		return txtConfirmPass.getText();
+	}
+
+	public void mostrarMensaje(String msg) {
+		JOptionPane.showMessageDialog(this, msg);
+	}
+
+	public void limpiarCampos() {
+		txtUsu.setText("");
+		txtRes.setText("");
+		txtNuevaPass.setText("");
+		txtConfirmPass.setText("");
+		cbxPregunta.setSelectedIndex(0);
+	}
 
 	@Override
-	public void setControlador(Controlador miControlador) { this.miControlador = miControlador; }
+	public void setModelo(Modelo miModelo) {
+		this.miModelo = miModelo;
+	}
+
+	@Override
+	public void setControlador(Controlador miControlador) {
+		this.miControlador = miControlador;
+	}
 }

@@ -1,20 +1,35 @@
 package Controlador;
 
+import java.awt.Image;
 import java.awt.Window;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
 import Modelo.Modelo;
 import Vista.Vista;
 import Vista._00_Login;
 import Vista._01_Registro;
 import Vista._02_Inicio;
 import Vista._04_DentroActividad;
+import Vista._08_PerfilUsuario;
+import Vista._09_OlvidoContraseña;
 import Vista._10_CrearEventoAdmin;
 import Vista._11_PanelAdmin;
 import Vista._14_CrearActividad;
 import Vista._15_Configuracion;
 import Vista._16_Grupos;
 import Vista._17_CrearGrupo;
+import Vista._13_AjustesUsuario;
 
 public class Controlador {
 
@@ -55,7 +70,7 @@ public class Controlador {
 	public void irARegistro() {
 		// Intentamos conectar usando los datos actuales del .ini
 		if (miModelo.conectarBD()) {
-			//  Si la conexión es exitosa, cambiamos de ventana
+			// Si la conexión es exitosa, cambiamos de ventana
 			this.cambiarVentana(0, 1);
 		} else {
 			// Si falla, avisamos en la propia pantalla de Login
@@ -170,6 +185,131 @@ public class Controlador {
 
 	public int modificarUsuario(String usr, String pwd) {
 		return miModelo.modificar(usr, pwd);
+	}
+	
+	// =========================================================================
+	// GESTIÓN DE FICHEROS (FOTO DE PERFIL)
+	// =========================================================================
+
+	public void subirFotoPerfil() {
+		// 1. Abrir explorador de archivos de Windows
+		JFileChooser chooser = new JFileChooser();
+		FileNameExtensionFilter filter = new FileNameExtensionFilter(
+				"Imágenes (JPG, PNG)", "jpg", "jpeg", "png");
+		chooser.setFileFilter(filter);
+
+		int seleccion = chooser.showOpenDialog(null);
+
+		if (seleccion == JFileChooser.APPROVE_OPTION) {
+			File archivoOrigen = chooser.getSelectedFile();
+			String usr = miModelo.getUsuarioLogueado();
+
+			try {
+				// 2. Crear carpeta "perfiles" en el proyecto si no existe
+				File carpeta = new File("perfiles");
+				if (!carpeta.exists()) {
+					carpeta.mkdir();
+				}
+
+				// 3. Copiar la imagen y llamarla como el usuario (ej: perfiles/Ivan.jpg)
+				File archivoDestino = new File("perfiles/" + usr + ".jpg");
+				Files.copy(archivoOrigen.toPath(), archivoDestino.toPath(),
+						StandardCopyOption.REPLACE_EXISTING);
+
+				JOptionPane.showMessageDialog(null, "¡Foto de perfil actualizada con éxito!");
+
+			} catch (Exception e) {
+				System.err.println("Error al guardar fichero: " + e.getMessage());
+				JOptionPane.showMessageDialog(null, "Error al guardar la imagen.", "Error",
+						JOptionPane.ERROR_MESSAGE);
+			}
+		}
+	}
+	
+	
+
+	// =========================================================================
+	// 8. RECUPERACIÓN DE CONTRASEÑA Y PERFIL
+	// =========================================================================
+
+	public void restablecerContrasena() {
+		_09_OlvidoContraseña vista = (_09_OlvidoContraseña) misVistas[9];
+
+		String usr = vista.getUsuario();
+		int idPregunta = vista.getIndicePregunta();
+		String respuesta = vista.getRespuestaSeguridad();
+		String nuevaPass = vista.getNuevaPass();
+		String confirmPass = vista.getConfirmPass();
+
+		if (usr.isEmpty() || respuesta.isEmpty() || nuevaPass.isEmpty()) {
+			vista.mostrarMensaje("Por favor, rellena todos los campos.");
+			return;
+		}
+		if (idPregunta == 0) {
+			vista.mostrarMensaje("Por favor, selecciona una pregunta de seguridad.");
+			return;
+		}
+		if (!nuevaPass.equals(confirmPass)) {
+			vista.mostrarMensaje("Las contraseñas no coinciden.");
+			return;
+		}
+		if (!miModelo.existeUsuario(usr)) {
+			vista.mostrarMensaje("El usuario indicado no existe.");
+			return;
+		}
+
+		// Comprobamos en el Modelo si la respuesta es correcta
+		boolean esCorrecta = miModelo.verificarRespuestaSeguridad(usr, idPregunta, respuesta);
+
+		if (esCorrecta) {
+			int filasAfectadas = miModelo.modificar(usr, nuevaPass);
+			if (filasAfectadas > 0) {
+				vista.mostrarMensaje("Contraseña actualizada con éxito. Ya puedes iniciar sesión.");
+				vista.limpiarCampos();
+				cambiarVentana(9, 0); // Volver al login
+			} else {
+				vista.mostrarMensaje("Error al actualizar la contraseña en la base de datos.");
+			}
+		} else {
+			vista.mostrarMensaje("La respuesta a la pregunta de seguridad es incorrecta.");
+		}
+	}
+
+	public void alAbrirPerfil() {
+		_08_PerfilUsuario vista = (_08_PerfilUsuario) misVistas[8];
+		String usr = miModelo.getUsuarioLogueado();
+
+		// 1. Extraemos las estadísticas de la BD
+		int[] stats = miModelo.obtenerEstadisticasUsuario(usr);
+		int puntos = stats[0];
+		int totalActividades = stats[1];
+
+		// 2. Calculamos lógica de negocio (Ej: Sube de nivel cada 500 puntos)
+		int nivel = (puntos / 500) + 1;
+		int monedas = puntos; // Asumimos que 1 punto = 1 moneda para la tienda
+
+		// 3. Inyectamos los datos en el banner
+		vista.setDatosBanner(usr.toUpperCase(), nivel, monedas, totalActividades);
+
+		// 4. Inyectamos las tablas
+		Object[][] datosLogros = getTablaLogrosPerfil();
+		Object[][] datosInv = getTablaInventarioPerfil();
+		vista.setTablasPerfil(datosLogros, datosInv);
+		
+		File fotoFile = new File("perfiles/" + usr + ".jpg");
+		if (fotoFile.exists()) {
+			try {
+				// Leemos la imagen y la escalamos para que encaje perfecta en el cuadro de 120x120
+				BufferedImage imgOriginal = ImageIO.read(fotoFile);
+				Image imgEscalada = imgOriginal.getScaledInstance(120, 120, Image.SCALE_SMOOTH);
+				vista.setImagenPerfil(new ImageIcon(imgEscalada));
+			} catch (Exception e) {
+				vista.setImagenPerfil(null);
+			}
+		} else {
+			// Si el usuario no ha subido foto nunca, lo dejamos vacío
+			vista.setImagenPerfil(null);
+		}
 	}
 
 	// =========================================================================
@@ -487,7 +627,7 @@ public class Controlador {
 			vista4.mostrarMensaje("Hubo un error al registrar la actividad.");
 		}
 	}
-	
+
 	public void cargarConfiguracionAjustes() {
 		_15_Configuracion vista = (_15_Configuracion) misVistas[16];
 		vista.setDatosConfig(miModelo.getLoginDB(), miModelo.getPwdDB(), miModelo.getUrlDB());
@@ -499,4 +639,54 @@ public class Controlador {
 		vista.mostrarMensaje("Configuración guardada. La conexión se ha reiniciado.");
 		((javax.swing.JFrame) misVistas[16]).dispose();
 	}
+
+	public void guardarAjustes() {
+		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
+		
+		// 1. Recogemos los datos
+		String usrActual = miModelo.getUsuarioLogueado();
+		String nuevoUsr = vista.getNuevoNombre();
+		String nuevoCorreo = vista.getNuevoEmail();
+		String nuevaPwd = vista.getNuevaPass();
+
+		// 2. Validaciones básicas
+		if (nuevoUsr.trim().isEmpty() || nuevoCorreo.trim().isEmpty()) {
+			vista.mostrarMensaje("El nombre de usuario y el correo no pueden estar vacíos.");
+			return;
+		}
+
+		
+		if (!usrActual.equals(nuevoUsr)) {
+			File fotoVieja = new File("perfiles/" + usrActual + ".jpg");
+			if (fotoVieja.exists()) {
+				File fotoNueva = new File("perfiles/" + nuevoUsr + ".jpg");
+				
+				boolean renombrado = fotoVieja.renameTo(fotoNueva);
+				if (!renombrado) {
+					System.err.println("No se pudo renombrar la foto de perfil.");
+				}
+			}
+		}
+		boolean exito = miModelo.actualizarAjustes(usrActual, nuevoUsr, nuevoCorreo, nuevaPwd);
+		
+		if (exito) {
+		
+			miModelo.setUsuarioLogueado(nuevoUsr); 
+			
+			vista.mostrarMensaje("Perfil actualizado correctamente.");
+			vista.setDatosActuales(nuevoUsr, nuevoCorreo);
+			cambiarVentana(14, 8); // Volvemos al perfil
+		} else {
+			vista.mostrarMensaje("Error al actualizar. Es posible que el nombre de usuario ya esté en uso.");
+		}
+	}
+
+	public void alAbrirAjustes() {
+		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
+		String nombre = miModelo.getUsuarioLogueado();
+		String email = miModelo.sacarEmail();
+		vista.setDatosActuales(nombre, email);
+	}
+	
+	
 }
