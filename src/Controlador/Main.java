@@ -23,13 +23,14 @@ import Vista._14_CrearActividad;
 import Vista._15_Configuracion;
 import Vista._16_Grupos;
 import Vista._17_CrearGrupo;
+import Vista._18_VerificarOTP;
 
 public class Main {
 		public static void main(String[] args) { 
 			
 		Controlador miControlador = new Controlador();
 		Modelo miModelo = new Modelo();
-		Vista[] misVistas = new Vista[18];
+		Vista[] misVistas = new Vista[19];
 		
 		misVistas[0] = new _00_Login();
 		misVistas[1] =new _01_Registro();
@@ -49,6 +50,7 @@ public class Main {
 		misVistas[15] = new _14_CrearActividad();
 		misVistas[16] = new _15_Configuracion();
 		misVistas[17] = new _17_CrearGrupo();
+		misVistas[18] = new _18_VerificarOTP();
 
 
 		

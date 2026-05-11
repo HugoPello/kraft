@@ -6,6 +6,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
@@ -14,6 +15,8 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
+import com.mysql.cj.jdbc.CallableStatement;
 
 import Modelo.Modelo;
 import Vista.Vista;
@@ -120,55 +123,63 @@ public class Controlador {
 	}
 
 	public void registrarUsuario() {
-		_01_Registro vistaReg = (_01_Registro) misVistas[1];
+	    _01_Registro vistaReg = (_01_Registro) misVistas[1];
 
-		String usr = vistaReg.getTxtNombre();
-		String pwd = vistaReg.getTxtPass();
-		String pwdRepetir = vistaReg.getPasswordFieldRepetir();
-		String fecha = vistaReg.getTxtFechaNac();
-		int idPregunta = vistaReg.getIndicePregunta();
-		String respuesta = vistaReg.getTxtRespuesta();
-		boolean esAdmin = vistaReg.isModoAdmin();
-		String adminPass = vistaReg.getPassAdmin();
+	    // 1. Extraer todos los datos, incluido el nuevo campo Email
+	    String usr = vistaReg.getTxtNombre();
+	    String emailDestino = vistaReg.getTxtEmail(); // <--- NUEVO
+	    String pwd = vistaReg.getTxtPass();
+	    String pwdRepetir = vistaReg.getPasswordFieldRepetir();
+	    String fecha = vistaReg.getTxtFechaNac();
+	    int idPregunta = vistaReg.getIndicePregunta();
+	    String respuesta = vistaReg.getTxtRespuesta();
+	    boolean esAdmin = vistaReg.isModoAdmin();
+	    String adminPass = vistaReg.getPassAdmin();
 
-		if (usr.trim().isEmpty() || pwd.isEmpty() || respuesta.trim().isEmpty()) {
-			vistaReg.mostrarMensaje("Error: Nombre, Contraseña y Respuesta son obligatorios.");
-			return;
-		}
-		if (!pwd.equals(pwdRepetir)) {
-			vistaReg.mostrarMensaje("Error: Las contraseñas no coinciden.");
-			return;
-		}
-		if (!fecha.isEmpty()) {
-			try {
-				java.sql.Date.valueOf(fecha);
-			} catch (Exception e) {
-				vistaReg.mostrarMensaje("Error: El formato de la fecha debe ser YYYY-MM-DD.");
-				return;
-			}
-		}
+	    // 2. Validaciones básicas
+	    if (usr.trim().isEmpty() || pwd.isEmpty() || respuesta.trim().isEmpty() || emailDestino.trim().isEmpty()) {
+	        vistaReg.mostrarMensaje("Error: Nombre, Email, Contraseña y Respuesta son obligatorios.");
+	        return;
+	    }
+	    
+	    // ... (mantén tus validaciones de pwd.equals y formato de fecha)
 
-		boolean rolFinal = false;
-		if (esAdmin) {
-			if (!adminPass.equals("1234")) {
-				vistaReg.mostrarMensaje("Error: Contraseña de Administrador incorrecta.");
-				return;
-			}
-			rolFinal = true;
-		}
+	    boolean rolFinal = false;
+	    if (esAdmin) {
+	        if (!adminPass.equals("1234")) {
+	            vistaReg.mostrarMensaje("Error: Contraseña de Administrador incorrecta.");
+	            return;
+	        }
+	        rolFinal = true;
+	    }
 
-		if (miModelo.existeUsuario(usr)) {
-			vistaReg.mostrarMensaje("Error: El nombre de usuario '" + usr + "' ya está en uso.");
-			return;
-		}
+	    if (miModelo.existeUsuario(usr)) {
+	        vistaReg.mostrarMensaje("Error: El nombre de usuario '" + usr + "' ya está en uso.");
+	        return;
+	    }
 
-		boolean insertadoOK = miModelo.registroCompleto(usr, pwd, rolFinal, fecha, idPregunta, respuesta);
-		if (insertadoOK) {
-			vistaReg.mostrarMensaje("¡Registro exitoso! Ya puedes iniciar sesión.");
-			cambiarVentana(1, 0);
-		} else {
-			vistaReg.mostrarMensaje("Error Crítico: No se pudo guardar en la base de datos.");
-		}
+	    // 3. Llamada al modelo con los 7 parámetros correctos
+	    boolean insertadoOK = miModelo.registroCompleto(usr, pwd, rolFinal, fecha, idPregunta, respuesta, emailDestino);
+	    
+	    if (insertadoOK) {
+	        // 4. Tras el registro, recuperamos el OTP que generó el Trigger en MySQL
+	        String otpGenerado = miModelo.obtenerUltimoOTP(usr);
+	        
+	        if (otpGenerado != null) {
+	            // 5. Enviamos el correo real usando tu clase de Servicios
+	            Servicios.Email miCorreo = new Servicios.Email();
+	            miCorreo.enviarCorreoOTP(emailDestino, otpGenerado);
+	            
+	            vistaReg.mostrarMensaje("¡Registro casi listo! Se ha enviado un código a " + emailDestino);
+	            
+	            // 6. Cambiamos a la ventana de verificación OTP (ej: índice 18)
+	            cambiarVentana(1, 18); 
+	        } else {
+	            vistaReg.mostrarMensaje("Error: Usuario creado pero no se pudo generar el código OTP.");
+	        }
+	    } else {
+	        vistaReg.mostrarMensaje("Error Crítico: No se pudo guardar en la base de datos.");
+	    }
 	}
 
 	public ArrayList<Object[]> getDatosUsuarios() {
@@ -688,5 +699,22 @@ public class Controlador {
 		vista.setDatosActuales(nombre, email);
 	}
 	
+	public void validarCodigoOTP(String codigoIntroducido) {
+	    // Obtenemos el usuario que se acaba de registrar (puedes guardarlo en una variable global al registrar)
+	    String usr = miModelo.getUltimoUsuarioRegistrado(); 
+
+	    try (CallableStatement cst = (CallableStatement) miModelo.getConexion().prepareCall("{call validate_otp(?, ?)}")) {
+	        cst.setString(1, usr);
+	        cst.setString(2, codigoIntroducido);
+	        cst.execute(); // Ejecuta el procedimiento que cambia is_verified a 1
+
+	        JOptionPane.showMessageDialog(null, "¡Cuenta activada! Ya puedes iniciar sesión.");
+	        cambiarVentana(18, 0); // Volver al login tras el éxito
+
+	    } catch (SQLException e) {
+	        // Aquí capturamos el SIGNAL SQLSTATE '45000' que configuramos en MySQL
+	        JOptionPane.showMessageDialog(null, e.getMessage(), "Error de Verificación", JOptionPane.ERROR_MESSAGE);
+	    }
+	}
 	
 }

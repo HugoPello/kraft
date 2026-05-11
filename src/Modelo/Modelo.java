@@ -265,79 +265,51 @@ public class Modelo {
 		}
 	}
 
+	// @Author: Hugo
 	public boolean registroCompleto(String usr, String pwd, boolean rol, String fechaNac, int idPregunta,
-			String respuesta) {
-		try {
-			conexion.setAutoCommit(false);
+            String respuesta, String correo) {
+        try {
+            conexion.setAutoCommit(false); // Iniciamos transacción
 
-			String query1 = "INSERT INTO USERS (USR, PWD, ROL, fechaNacimiento) VALUES (?, ?, ?, ?)";
-			PreparedStatement ps1 = conexion.prepareStatement(query1);
-			ps1.setString(1, usr);
-			ps1.setString(2, pwd);
-			ps1.setBoolean(3, rol);
+            // 1. Insertamos en USERS incluyendo el correo y el estado de verificación inicial
+            String query1 = "INSERT INTO USERS (USR, PWD, ROL, correo, fechaNacimiento, is_verified) VALUES (?, ?, ?, ?, ?, 0)";
+            PreparedStatement ps1 = conexion.prepareStatement(query1);
+            ps1.setString(1, usr);
+            ps1.setString(2, pwd);
+            ps1.setBoolean(3, rol);
+            ps1.setString(4, correo); // El correo del usuario para el 2FA
 
-			if (fechaNac == null || fechaNac.trim().isEmpty()) {
-				ps1.setNull(4, java.sql.Types.DATE);
-			} else {
-				ps1.setDate(4, java.sql.Date.valueOf(fechaNac));
-			}
-			ps1.executeUpdate();
+            if (fechaNac == null || fechaNac.trim().isEmpty()) {
+                ps1.setNull(5, java.sql.Types.DATE);
+            } else {
+                ps1.setDate(5, java.sql.Date.valueOf(fechaNac));
+            }
+            ps1.executeUpdate();
 
-			String query2 = "INSERT INTO RESPONDE_PREGUNTA (nombreUsuario, id_pregunta, respuesta_texto) VALUES (?, ?, ?)";
-			PreparedStatement ps2 = conexion.prepareStatement(query2);
-			ps2.setString(1, usr);
-			ps2.setInt(2, idPregunta);
-			ps2.setString(3, respuesta);
-			ps2.executeUpdate();
+            // 2. Insertamos la pregunta de seguridad en tu segunda tabla
+            String query2 = "INSERT INTO RESPONDE_PREGUNTA (nombreUsuario, id_pregunta, respuesta_texto) VALUES (?, ?, ?)";
+            PreparedStatement ps2 = conexion.prepareStatement(query2);
+            ps2.setString(1, usr);
+            ps2.setInt(2, idPregunta);
+            ps2.setString(3, respuesta);
+            ps2.executeUpdate();
 
-			conexion.commit();
-			return true;
+            conexion.commit(); // Si todo va bien, guardamos cambios
+            this.ultimoUsuarioRegistrado = usr;
+            return true;
 
-		} catch (Exception e) {
-			try {
-				conexion.rollback();
-			} catch (Exception ex) {
-			}
-			return false;
-
-		} finally {
-			try {
-				conexion.setAutoCommit(true);
-			} catch (Exception ex) {
-			}
-		}
-	}
-
-	public boolean existeUsuario(String usr) {
-		String query = "SELECT USR FROM USERS WHERE USR = ?";
-		try (PreparedStatement pstmt = conexion.prepareStatement(query)) {
-			pstmt.setString(1, usr);
-			ResultSet rs = pstmt.executeQuery();
-			return rs.next();
-		} catch (SQLException e) {
-			return false;
-		}
-	}
-
-	public int modificar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE USERS SET PWD = ? WHERE USR = ?")) {
-			pstmt.setString(1, pwd);
-			pstmt.setString(2, usr);
-			return pstmt.executeUpdate();
-		} catch (SQLException e) {
-			return 0;
-		}
-	}
-
-	public int borrar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM USERS WHERE usr = ? AND pwd=?")) {
-			pstmt.setString(1, usr);
-			pstmt.setString(2, pwd);
-			return pstmt.executeUpdate();
-		} catch (SQLException e) {
-			return 0;
-		}
-	}
+        } catch (Exception e) {
+            try {
+                conexion.rollback(); // Si algo falla, deshacemos todo
+            } catch (Exception ex) {}
+            System.err.println("Error en registro: " + e.getMessage());
+            return false;
+        } finally {
+            try {
+                conexion.setAutoCommit(true);
+            } catch (Exception ex) {}
+        }
+    }
 
 	public ArrayList<Object[]> obtenerDatosUsuarios() {
 		ArrayList<Object[]> listaUsuarios = new ArrayList<>();
@@ -627,6 +599,37 @@ public class Modelo {
 		}
 		return "El grupo no existe.";
 	}
+	
+	public boolean existeUsuario(String usr) {
+        String query = "SELECT USR FROM USERS WHERE USR = ?";
+        try (PreparedStatement pstmt = conexion.prepareStatement(query)) {
+            pstmt.setString(1, usr);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    public int modificar(String usr, String pwd) {
+        try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE USERS SET PWD = ? WHERE USR = ?")) {
+            pstmt.setString(1, pwd);
+            pstmt.setString(2, usr);
+            return pstmt.executeUpdate();
+        } catch (SQLException e) {
+            return 0;
+        }
+    }
+
+    public int borrar(String usr, String pwd) {
+        try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM USERS WHERE usr = ? AND pwd=?")) {
+            pstmt.setString(1, usr);
+            pstmt.setString(2, pwd);
+            return pstmt.executeUpdate();
+        } catch (SQLException e) {
+            return 0;
+        }
+    }
 
 	// Permite a un usuario abandonar un grupo
 	public boolean abandonarGrupo(String usr, String nombreGrupo) {
@@ -729,5 +732,16 @@ public class Modelo {
 	        System.err.println("Error al recuperar OTP: " + e.getMessage());
 	    }
 	    return otp;
+	}
+	
+	public Connection getConexion() {
+	    return this.conexion;
+	}
+
+	// 2. Para saber a quién estamos verificando en la ventana OTP
+	private String ultimoUsuarioRegistrado;
+
+	public String getUltimoUsuarioRegistrado() {
+	    return this.ultimoUsuarioRegistrado;
 	}
 }

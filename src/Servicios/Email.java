@@ -6,7 +6,7 @@ public class Email {
 	public void enviarCorreoOTP(String emailDestino, String codigoOTP) {
 	    try {
 	        // Usa tu cuenta de Gmail y el código de 16 caracteres de Google
-	        EmailService mail = new EmailService("krafutad@gmail.com", "uhay arnj hibx juor");
+	        EmailService mail = new EmailService("kraftutad@gmail.com", "REDACTED");
 	        
 	        String asunto = "Código de Verificación - Proyecto 2FA";
 	        String mensaje = "Tu código de seguridad es: " + codigoOTP + "\nExpira en 5 minutos.";

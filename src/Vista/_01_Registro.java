@@ -54,7 +54,7 @@ public class _01_Registro extends JFrame implements Vista {
     private JComboBox<String> comboSeguridad;
     private JRadioButton rdbtnAdmin;
     private JButton btnRegistrar;
-    private JPasswordField passwordField;
+    private JTextField txtEmail;
 
     public _01_Registro() {
         setUndecorated(true);
@@ -333,18 +333,18 @@ public class _01_Registro extends JFrame implements Vista {
         lblSeguridadPass.setBounds(282, 221, 130, 14);
         panelFormulario.add(lblSeguridadPass);
         
-        passwordField = new JPasswordField();
-        passwordField.setForeground(Color.WHITE);
-        passwordField.setCaretColor(Color.WHITE);
-        passwordField.setBackground(new Color(40, 40, 40));
-        passwordField.setBounds(200, 125, 330, 35);
-        panelFormulario.add(passwordField);
-        
         JLabel lblEmail = new JLabel("E-mail");
         lblEmail.setForeground(Color.WHITE);
         lblEmail.setFont(new Font("Arial", Font.BOLD, 16));
         lblEmail.setBounds(50, 125, 100, 30);
         panelFormulario.add(lblEmail);
+        
+        txtEmail = new JTextField();
+        txtEmail.setForeground(Color.WHITE);
+        txtEmail.setCaretColor(Color.WHITE);
+        txtEmail.setBackground(new Color(40, 40, 40));
+        txtEmail.setBounds(200, 125, 330, 35);
+        panelFormulario.add(txtEmail);
         
         this.addWindowListener(new WindowAdapter() {
             @Override
@@ -454,4 +454,8 @@ public class _01_Registro extends JFrame implements Vista {
 			btnRegistrar.setEnabled(false);
 		}
 	}
+    
+    public String getTxtEmail() {
+        return txtEmail.getText();
+    }
 }
