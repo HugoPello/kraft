@@ -4,7 +4,25 @@ package Controlador;
 import javax.swing.JFrame;
 
 import Modelo.Modelo;
-import Vista.*;
+import Vista.Vista;
+import Vista._00_Login;
+import Vista._01_Registro;
+import Vista._02_Inicio;
+import Vista._03_Actividades;
+import Vista._04_DentroActividad;
+import Vista._05_Logros;
+import Vista._06_Ranking;
+import Vista._07_Tienda;
+import Vista._08_PerfilUsuario;
+import Vista._09_OlvidoContraseña;
+import Vista._10_CrearEventoAdmin;
+import Vista._11_PanelAdmin;
+import Vista._12_VistaDeEvento;
+import Vista._13_AjustesUsuario;
+import Vista._14_CrearActividad;
+import Vista._15_Configuracion;
+import Vista._16_Grupos;
+import Vista._17_CrearGrupo;
 
 public class Main {
 		public static void main(String[] args) { 

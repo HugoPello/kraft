@@ -243,7 +243,7 @@ public class Modelo {
 	public void loginSeguro(String usr, String pwd) {
 		// Pon el nombre de la tabla EXACTAMENTE igual que lo creaste en Aiven (por ej.
 		// USERS)
-		String query = "SELECT * FROM USERS WHERE USR=? AND PWD=?";
+		String query = "SELECT * FROM USERS WHERE USR=? AND PWD=? AND is_verified=1";
 		try {
 			PreparedStatement pstmt = conexion.prepareStatement(query);
 			pstmt.setString(1, usr);
@@ -712,5 +712,22 @@ public class Modelo {
 
 	public String getUrlDB() {
 		return this.url;
+	}
+	
+	public String obtenerUltimoOTP(String usuario) {
+	    String otp = null;
+	    // Buscamos el código más reciente generado para este usuario
+	    String sql = "SELECT otp_code FROM OTP_CODES WHERE USR = ? ORDER BY expires_at DESC LIMIT 1";
+	    
+	    try (PreparedStatement pst = conexion.prepareStatement(sql)) {
+	        pst.setString(1, usuario);
+	        ResultSet rs = pst.executeQuery();
+	        if (rs.next()) {
+	            otp = rs.getString("otp_code");
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error al recuperar OTP: " + e.getMessage());
+	    }
+	    return otp;
 	}
 }
