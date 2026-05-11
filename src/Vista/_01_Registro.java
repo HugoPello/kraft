@@ -55,6 +55,8 @@ public class _01_Registro extends JFrame implements Vista {
     private JRadioButton rdbtnAdmin;
     private JButton btnRegistrar;
     private JTextField txtEmail;
+    private String captchaGenerado;
+
 
     public _01_Registro() {
         setUndecorated(true);
@@ -258,12 +260,25 @@ public class _01_Registro extends JFrame implements Vista {
         panelFormulario.add(txtFecha);
 
         // 7. CAPTCHA
-        JLabel lblCaptchaText = new JLabel("W6R2Q", JLabel.CENTER);
+        JLabel lblCaptchaText = new JLabel("", JLabel.CENTER); // Empezamos vacío
         lblCaptchaText.setOpaque(true);
         lblCaptchaText.setBackground(Color.LIGHT_GRAY);
         lblCaptchaText.setFont(new Font("Monospaced", Font.ITALIC | Font.BOLD, 20));
         lblCaptchaText.setBounds(50, 445, 120, 35);
         panelFormulario.add(lblCaptchaText);
+
+        // Generar el primer captcha al iniciar
+        captchaGenerado = generarTextoCaptcha();
+        lblCaptchaText.setText(captchaGenerado);
+
+        // OPCIONAL: Añade un MouseListener al lblCaptchaText para que cambie si el usuario hace clic (por si no se lee bien)
+        lblCaptchaText.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                captchaGenerado = generarTextoCaptcha();
+                lblCaptchaText.setText(captchaGenerado);
+            }
+        });
 
         txtCaptchaInput = new JTextField();
         txtCaptchaInput.addKeyListener(new KeyAdapter() {
@@ -345,6 +360,16 @@ public class _01_Registro extends JFrame implements Vista {
         txtEmail.setBackground(new Color(40, 40, 40));
         txtEmail.setBounds(200, 125, 330, 35);
         panelFormulario.add(txtEmail);
+        
+        JLabel lblNuevoCaptcha = new JLabel("Click para generar");
+        lblNuevoCaptcha.setBounds(50, 485, 150, 22);
+        panelFormulario.add(lblNuevoCaptcha);
+        lblNuevoCaptcha.setForeground(NARANJA);
+        
+        JLabel lblUnoNuevo = new JLabel("uno nuevo");
+        lblUnoNuevo.setForeground(new Color(255, 128, 0));
+        lblUnoNuevo.setBounds(50, 504, 150, 22);
+        panelFormulario.add(lblUnoNuevo);
         
         this.addWindowListener(new WindowAdapter() {
             @Override
@@ -457,5 +482,23 @@ public class _01_Registro extends JFrame implements Vista {
     
     public String getTxtEmail() {
         return txtEmail.getText();
+    }
+
+    public String getTxtCaptcha() {
+        return txtCaptchaInput.getText();
+    }
+
+    public String getCaptchaGenerado() {
+        return captchaGenerado;
+    }
+    
+    private String generarTextoCaptcha() {
+        String caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 5; i++) {
+            int index = (int) (Math.random() * caracteres.length());
+            sb.append(caracteres.charAt(index));
+        }
+        return sb.toString();
     }
 }

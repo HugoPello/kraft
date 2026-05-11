@@ -122,12 +122,13 @@ public class Controlador {
 		}
 	}
 
+	// @Author: Hugo
 	public void registrarUsuario() {
 	    _01_Registro vistaReg = (_01_Registro) misVistas[1];
 
-	    // 1. Extraer todos los datos, incluido el nuevo campo Email
+	    // 1. Extraer todos los datos de la vista
 	    String usr = vistaReg.getTxtNombre();
-	    String emailDestino = vistaReg.getTxtEmail(); // <--- NUEVO
+	    String emailDestino = vistaReg.getTxtEmail();
 	    String pwd = vistaReg.getTxtPass();
 	    String pwdRepetir = vistaReg.getPasswordFieldRepetir();
 	    String fecha = vistaReg.getTxtFechaNac();
@@ -135,15 +136,40 @@ public class Controlador {
 	    String respuesta = vistaReg.getTxtRespuesta();
 	    boolean esAdmin = vistaReg.isModoAdmin();
 	    String adminPass = vistaReg.getPassAdmin();
+	    
+	    // Datos del Captcha
+	    String captchaUsuario = vistaReg.getTxtCaptcha();
+	    String captchaReal = vistaReg.getCaptchaGenerado();
 
-	    // 2. Validaciones básicas
+	    // 2. Validaciones de campos obligatorios
 	    if (usr.trim().isEmpty() || pwd.isEmpty() || respuesta.trim().isEmpty() || emailDestino.trim().isEmpty()) {
 	        vistaReg.mostrarMensaje("Error: Nombre, Email, Contraseña y Respuesta son obligatorios.");
 	        return;
 	    }
-	    
-	    // ... (mantén tus validaciones de pwd.equals y formato de fecha)
 
+	    // 3. Validación de Captcha (Añadido)
+	    if (!captchaUsuario.equalsIgnoreCase(captchaReal)) {
+	        vistaReg.mostrarMensaje("Error: El código Captcha no coincide.");
+	        return;
+	    }
+
+	    // 4. Validación de coincidencia de contraseñas [Tu código original]
+	    if (!pwd.equals(pwdRepetir)) {
+	        vistaReg.mostrarMensaje("Error: Las contraseñas no coinciden.");
+	        return;
+	    }
+
+	    // 5. Validación de formato de fecha [Tu código original]
+	    if (!fecha.isEmpty()) {
+	        try {
+	            java.sql.Date.valueOf(fecha);
+	        } catch (Exception e) {
+	            vistaReg.mostrarMensaje("Error: El formato de la fecha debe ser YYYY-MM-DD.");
+	            return;
+	        }
+	    }
+
+	    // 6. Lógica de Rol y Contraseña de Administrador
 	    boolean rolFinal = false;
 	    if (esAdmin) {
 	        if (!adminPass.equals("1234")) {
@@ -153,29 +179,30 @@ public class Controlador {
 	        rolFinal = true;
 	    }
 
+	    // 7. Comprobación de existencia previa
 	    if (miModelo.existeUsuario(usr)) {
 	        vistaReg.mostrarMensaje("Error: El nombre de usuario '" + usr + "' ya está en uso.");
 	        return;
 	    }
 
-	    // 3. Llamada al modelo con los 7 parámetros correctos
+	    // 8. Llamada al modelo (7 parámetros: incluye el correo)
 	    boolean insertadoOK = miModelo.registroCompleto(usr, pwd, rolFinal, fecha, idPregunta, respuesta, emailDestino);
 	    
 	    if (insertadoOK) {
-	        // 4. Tras el registro, recuperamos el OTP que generó el Trigger en MySQL
+	        // 9. Recuperar el OTP generado automáticamente por el Trigger en MySQL
 	        String otpGenerado = miModelo.obtenerUltimoOTP(usr);
 	        
 	        if (otpGenerado != null) {
-	            // 5. Enviamos el correo real usando tu clase de Servicios
+	            // 10. Envío del email real mediante el servicio de mensajería
 	            Servicios.Email miCorreo = new Servicios.Email();
 	            miCorreo.enviarCorreoOTP(emailDestino, otpGenerado);
 	            
-	            vistaReg.mostrarMensaje("¡Registro casi listo! Se ha enviado un código a " + emailDestino);
+	            vistaReg.mostrarMensaje("¡Registro casi listo! Revisa el código enviado a " + emailDestino);
 	            
-	            // 6. Cambiamos a la ventana de verificación OTP (ej: índice 18)
+	            // 11. Cambiar a la ventana de verificación (Ventana 18)
 	            cambiarVentana(1, 18); 
 	        } else {
-	            vistaReg.mostrarMensaje("Error: Usuario creado pero no se pudo generar el código OTP.");
+	            vistaReg.mostrarMensaje("Usuario creado, pero hubo un error generando el código de seguridad.");
 	        }
 	    } else {
 	        vistaReg.mostrarMensaje("Error Crítico: No se pudo guardar en la base de datos.");
