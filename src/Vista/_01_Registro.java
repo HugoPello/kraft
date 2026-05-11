@@ -54,6 +54,7 @@ public class _01_Registro extends JFrame implements Vista {
     private JComboBox<String> comboSeguridad;
     private JRadioButton rdbtnAdmin;
     private JButton btnRegistrar;
+    private JPasswordField passwordField;
 
     public _01_Registro() {
         setUndecorated(true);
@@ -126,14 +127,14 @@ public class _01_Registro extends JFrame implements Vista {
         panelFormulario.add(txtNombre);
         
         JProgressBar progressBar = new JProgressBar();
-        progressBar.setBounds(362, 176, 145, 13);
+        progressBar.setBounds(362, 222, 145, 13);
         panelFormulario.add(progressBar);
 
         // 2. CONTRASEÑA
         JLabel lblPass = new JLabel("Contraseña:");
         lblPass.setForeground(Color.WHITE);
         lblPass.setFont(new Font("Arial", Font.BOLD, 16));
-        lblPass.setBounds(50, 130, 120, 30);
+        lblPass.setBounds(50, 176, 120, 30);
         panelFormulario.add(lblPass);
 
         txtPass = new JPasswordField();
@@ -146,7 +147,7 @@ public class _01_Registro extends JFrame implements Vista {
         txtPass.setBackground(GRIS_RECTANGULO);
         txtPass.setForeground(Color.WHITE);
         txtPass.setCaretColor(Color.WHITE);
-        txtPass.setBounds(200, 130, 330, 35);
+        txtPass.setBounds(200, 176, 330, 35);
         txtPass.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
@@ -183,14 +184,14 @@ public class _01_Registro extends JFrame implements Vista {
         JLabel lblRepetir = new JLabel("Repetir:");
         lblRepetir.setForeground(Color.WHITE);
         lblRepetir.setFont(new Font("Arial", Font.BOLD, 16));
-        lblRepetir.setBounds(50, 199, 150, 30);
+        lblRepetir.setBounds(50, 245, 150, 30);
         panelFormulario.add(lblRepetir);
 
         passwordFieldRepetir = new JPasswordField();
         passwordFieldRepetir.setBackground(GRIS_RECTANGULO);
         passwordFieldRepetir.setForeground(Color.WHITE);
         passwordFieldRepetir.setCaretColor(Color.WHITE);
-        passwordFieldRepetir.setBounds(200, 199, 330, 35);
+        passwordFieldRepetir.setBounds(200, 245, 330, 35);
         panelFormulario.add(passwordFieldRepetir);
 
         // 4. PREGUNTA SEGURIDAD
@@ -198,20 +199,20 @@ public class _01_Registro extends JFrame implements Vista {
         JLabel lblSeguridad = new JLabel("Pregunta:");
         lblSeguridad.setForeground(Color.WHITE);
         lblSeguridad.setFont(new Font("Arial", Font.BOLD, 16));
-        lblSeguridad.setBounds(50, 249, 120, 30);
+        lblSeguridad.setBounds(50, 295, 120, 30);
         panelFormulario.add(lblSeguridad);
 
         comboSeguridad = new JComboBox<String>();
         comboSeguridad.setBackground(GRIS_RECTANGULO);
         comboSeguridad.setForeground(Color.WHITE);
-        comboSeguridad.setBounds(200, 249, 330, 35);
+        comboSeguridad.setBounds(200, 295, 330, 35);
         panelFormulario.add(comboSeguridad);
         
         // 5. RESPUESTA SEGURIDAD
         JLabel lblRespuesta = new JLabel("Respuesta:");
         lblRespuesta.setForeground(Color.WHITE);
         lblRespuesta.setFont(new Font("Arial", Font.BOLD, 16));
-        lblRespuesta.setBounds(50, 299, 120, 30);
+        lblRespuesta.setBounds(50, 345, 120, 30);
         panelFormulario.add(lblRespuesta);
 
         txtRespuestaSeguridad = new JTextField();
@@ -224,14 +225,14 @@ public class _01_Registro extends JFrame implements Vista {
         txtRespuestaSeguridad.setBackground(GRIS_RECTANGULO);
         txtRespuestaSeguridad.setForeground(new Color(255, 255, 255));
         txtRespuestaSeguridad.setCaretColor(Color.WHITE);
-        txtRespuestaSeguridad.setBounds(200, 299, 330, 35);
+        txtRespuestaSeguridad.setBounds(200, 345, 330, 35);
         panelFormulario.add(txtRespuestaSeguridad);
 
         // 6. FECHA NACIMIENTO (Formato: YYYY-MM-DD)
         JLabel lblFecha = new JLabel("Fecha Nac:");
         lblFecha.setForeground(Color.WHITE);
         lblFecha.setFont(new Font("Arial", Font.BOLD, 16));
-        lblFecha.setBounds(50, 349, 120, 30);
+        lblFecha.setBounds(50, 395, 120, 30);
         panelFormulario.add(lblFecha);
 
         txtFecha = new JTextField();
@@ -253,7 +254,7 @@ public class _01_Registro extends JFrame implements Vista {
         txtFecha.setBackground(GRIS_RECTANGULO);
         txtFecha.setForeground(new Color(128, 128, 128));
         txtFecha.setCaretColor(Color.WHITE);
-        txtFecha.setBounds(200, 349, 330, 35);
+        txtFecha.setBounds(200, 395, 330, 35);
         panelFormulario.add(txtFecha);
 
         // 7. CAPTCHA
@@ -261,7 +262,7 @@ public class _01_Registro extends JFrame implements Vista {
         lblCaptchaText.setOpaque(true);
         lblCaptchaText.setBackground(Color.LIGHT_GRAY);
         lblCaptchaText.setFont(new Font("Monospaced", Font.ITALIC | Font.BOLD, 20));
-        lblCaptchaText.setBounds(50, 399, 120, 35);
+        lblCaptchaText.setBounds(50, 445, 120, 35);
         panelFormulario.add(lblCaptchaText);
 
         txtCaptchaInput = new JTextField();
@@ -274,7 +275,7 @@ public class _01_Registro extends JFrame implements Vista {
         txtCaptchaInput.setBackground(GRIS_RECTANGULO);
         txtCaptchaInput.setForeground(new Color(255, 255, 255));
         txtCaptchaInput.setCaretColor(Color.WHITE);
-        txtCaptchaInput.setBounds(200, 399, 330, 35);
+        txtCaptchaInput.setBounds(200, 445, 330, 35);
         panelFormulario.add(txtCaptchaInput);
 
         // 8. MODO ADMIN
@@ -282,13 +283,13 @@ public class _01_Registro extends JFrame implements Vista {
         rdbtnAdmin.setForeground(NARANJA);
         rdbtnAdmin.setBackground(GRIS_FONDO);
         rdbtnAdmin.setFocusPainted(false);
-        rdbtnAdmin.setBounds(200, 449, 250, 30);
+        rdbtnAdmin.setBounds(200, 495, 250, 30);
         panelFormulario.add(rdbtnAdmin);
 
         JLabel lblAdminPass = new JLabel("Contraseña Admin:");
         lblAdminPass.setForeground(Color.CYAN);
         lblAdminPass.setFont(new Font("Arial", Font.BOLD, 14));
-        lblAdminPass.setBounds(50, 489, 150, 30);
+        lblAdminPass.setBounds(50, 535, 150, 30);
         lblAdminPass.setVisible(false);
         panelFormulario.add(lblAdminPass);
 
@@ -296,7 +297,7 @@ public class _01_Registro extends JFrame implements Vista {
         txtAdminPass.setBackground(GRIS_RECTANGULO);
         txtAdminPass.setForeground(Color.WHITE);
         txtAdminPass.setCaretColor(Color.WHITE);
-        txtAdminPass.setBounds(200, 489, 330, 35);
+        txtAdminPass.setBounds(200, 535, 330, 35);
         txtAdminPass.setVisible(false);
         panelFormulario.add(txtAdminPass);
 
@@ -313,7 +314,7 @@ public class _01_Registro extends JFrame implements Vista {
         	if(miControlador != null) miControlador.cambiarVentana(1, 0);
         });
         estilizarBotonAccion(btnLogin, GRIS_RECTANGULO, Color.WHITE);
-        btnLogin.setBounds(100, 550, 180, 45);
+        btnLogin.setBounds(104, 593, 180, 45);
         panelFormulario.add(btnLogin);
 
         btnRegistrar = new JButton("REGISTRAR");
@@ -322,15 +323,28 @@ public class _01_Registro extends JFrame implements Vista {
         	if(miControlador != null) miControlador.registrarUsuario();
         });
         estilizarBotonAccion(btnRegistrar, NARANJA, Color.BLACK);
-        btnRegistrar.setBounds(320, 550, 180, 45);
+        btnRegistrar.setBounds(327, 595, 180, 45);
         panelFormulario.add(btnRegistrar);
         
         
         JLabel lblSeguridadPass = new JLabel("Seguridad:");
         lblSeguridadPass.setFont(new Font("Tahoma", Font.PLAIN, 15));
         lblSeguridadPass.setForeground(new Color(255, 255, 255));
-        lblSeguridadPass.setBounds(282, 175, 130, 14);
+        lblSeguridadPass.setBounds(282, 221, 130, 14);
         panelFormulario.add(lblSeguridadPass);
+        
+        passwordField = new JPasswordField();
+        passwordField.setForeground(Color.WHITE);
+        passwordField.setCaretColor(Color.WHITE);
+        passwordField.setBackground(new Color(40, 40, 40));
+        passwordField.setBounds(200, 125, 330, 35);
+        panelFormulario.add(passwordField);
+        
+        JLabel lblEmail = new JLabel("E-mail");
+        lblEmail.setForeground(Color.WHITE);
+        lblEmail.setFont(new Font("Arial", Font.BOLD, 16));
+        lblEmail.setBounds(50, 125, 100, 30);
+        panelFormulario.add(lblEmail);
         
         this.addWindowListener(new WindowAdapter() {
             @Override
