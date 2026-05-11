@@ -1,3 +1,12 @@
+/**
+ * Clase que gestiona la lógica de negocio y la persistencia de datos.
+ * Se comunica con la base de datos MySQL mediante JDBC y gestiona el estado
+ * de la sesión del usuario.
+ * 
+ * @author Hugo
+ * @version 1.0
+ */
+
 package Modelo;
 
 import java.io.BufferedReader;
@@ -41,6 +50,12 @@ public class Modelo {
 	}
 
 	// LECTURA FICHERO
+	
+	/**
+	 * Carga los parámetros de conexión desde un archivo externo .ini.
+	 * Permite que la aplicación sea portable sin necesidad de recompilar el código 
+	 * ante cambios en el servidor de base de datos.
+	 */
 	public void leerConfig() {
 		try (BufferedReader br = new BufferedReader(new FileReader("config.ini"))) {
 			// Aplicamos la limpieza a cada línea leída
@@ -85,11 +100,21 @@ public class Modelo {
 		}
 	}
 
+	/**
+	 * Establece la conexión física con el servidor de base de datos MySQL.
+	 * Carga el driver JDBC dinámicamente y utiliza las credenciales obtenidas
+	 * del archivo de configuración para abrir un socket de comunicación.
+	 * 
+	 * @return true si la conexión se establece o ya estaba abierta; false si hay error de red o credenciales.
+	 */
 	public boolean conectarBD() {
 		try {
 			System.out.println("Conectando a: " + url);
+			
+			// Verificación de estado: Solo intentamos conectar si la conexión es nula o se ha cerrado
 			if (conexion == null || conexion.isClosed()) {
 				Class.forName("com.mysql.cj.jdbc.Driver");
+				// Intento de autenticación mediante el DriverManager utilizando la URL y credenciales del .ini
 				conexion = DriverManager.getConnection(url, login, pwdDB);
 				System.out.println("-> Conexión establecida");
 			}
@@ -171,6 +196,16 @@ public class Modelo {
 	// 3. MOTORES GENÉRICOS DE CONSULTA
 	// =========================================================================
 
+	
+	/**
+     * Motor de consulta genérico para obtener datos de una columna específica.
+     * Utiliza Varargs para permitir un número dinámico de parámetros en el PreparedStatement.
+     * 
+     * @param query Sentencia SQL con marcadores '?'
+     * @param nombreColumna Etiqueta de la columna a extraer
+     * @param parametros Valores para inyectar en los marcadores de la query
+     * @return Array de String con los resultados o mensaje de "No hay datos"
+     */
 	public String[] obtenerDatosColumna(String query, String nombreColumna, Object... parametros) {
 		ArrayList<String> listaDatos = new ArrayList<>();
 
@@ -239,10 +274,17 @@ public class Modelo {
 	// =========================================================================
 	// 4. AUTENTICACIÓN Y GESTIÓN DE USUARIOS
 	// =========================================================================
-
+	
+	
+	/**
+	 * Realiza la validación de credenciales del usuario contra la base de datos.
+	 * El acceso solo se permite si el usuario existe, la contraseña coincide 
+	 * y el campo 'is_verified' es igual a 1 (activación por OTP).
+	 * 
+	 * @param usr Identificador del usuario.
+	 * @param pwd Contraseña introducida.
+	 */
 	public void loginSeguro(String usr, String pwd) {
-		// Pon el nombre de la tabla EXACTAMENTE igual que lo creaste en Aiven (por ej.
-		// USERS)
 		String query = "SELECT * FROM USERS WHERE USR=? AND PWD=? AND is_verified=1";
 		try {
 			PreparedStatement pstmt = conexion.prepareStatement(query);
@@ -265,7 +307,15 @@ public class Modelo {
 		}
 	}
 
-	// @Author: Hugo
+	/**
+     * Realiza un registro atómico del usuario utilizando transacciones SQL.
+     * Garantiza que el usuario no se cree si falla la inserción en la tabla de seguridad.
+     * 
+     * @param usr Nombre de identificación único
+     * @param pwd Contraseña (texto plano por requerimiento de proyecto)
+     * @param correo Dirección de email para el sistema 2FA
+     * @return true si el commit se realizó con éxito; false si hubo rollback
+     */
 	public boolean registroCompleto(String usr, String pwd, boolean rol, String fechaNac, int idPregunta,
             String respuesta, String correo) {
         try {
@@ -324,11 +374,21 @@ public class Modelo {
 		return listaUsuarios;
 	}
 
+	/**
+	 * Inserta un nuevo usuario en el sistema con permisos de usuario estándar (ROL = false).
+	 * Este método es utilizado por el panel de administración para el alta manual de cuentas.
+	 * 
+	 * @param usr Nombre de usuario único para el nuevo registro.
+	 * @param pwd Contraseña asociada a la cuenta.
+	 * @return true si el usuario se insertó correctamente (filas afectadas > 0); false si hubo un error (ej. usuario duplicado).
+	 */
 	public boolean insertarUsuarioAdmin(String usr, String pwd) {
+		// Definimos la consulta parametrizada para prevenir ataques de Inyección SQL
 		String query = "INSERT INTO USERS (USR, PWD, ROL) VALUES (?, ?, ?)";
 		try (PreparedStatement ps = conexion.prepareStatement(query)) {
 			ps.setString(1, usr);
 			ps.setString(2, pwd);
+			// Por defecto, las altas manuales desde el panel se crean como usuarios estándar
 			ps.setBoolean(3, false);
 			return ps.executeUpdate() > 0;
 		} catch (SQLException e) {
@@ -441,9 +501,20 @@ public class Modelo {
 		}
 	}
 
+	/**
+	 * Registra la finalización de una actividad por parte de un usuario específico.
+	 * El método realiza una búsqueda previa del ID de la actividad basándose en su nombre
+	 * para asegurar la integridad referencial antes de insertar el registro en el historial.
+	 * 
+	 * @param usr El nombre del usuario que completa la acción.
+	 * @param nombreActividad El nombre legible de la actividad realizada.
+	 * @return true si se encontró la actividad y se registró el progreso; false en caso contrario.
+	 */
 	public boolean registrarActividadCompletada(String usr, String nombreActividad) {
 		try {
 			int idActividad = -1;
+			
+			// Obtenemos el ID numérico asociado al nombre de la actividad.
 			PreparedStatement ps1 = conexion.prepareStatement("SELECT id_actividad FROM ACTIVIDADES WHERE nombre = ?");
 			ps1.setString(1, nombreActividad);
 			ResultSet rs = ps1.executeQuery();
@@ -451,8 +522,10 @@ public class Modelo {
 			if (rs.next()) {
 				idActividad = rs.getInt("id_actividad");
 			}
-
+			
+			// Si el ID existe, registramos la relación en la tabla intermedia.
 			if (idActividad != -1) {
+				// Se asocia el usuario logueado con la actividad mediante sus llaves foráneas.
 				PreparedStatement ps2 = conexion.prepareStatement(
 						"INSERT INTO COMPLETAR_ACTIVIDAD (nombreUsuario, id_actividad) VALUES (?, ?)");
 				ps2.setString(1, usr);
@@ -515,10 +588,24 @@ public class Modelo {
 		}
 	}
 
+	/**
+	 * Gestiona la creación de un nuevo grupo de usuarios y asigna automáticamente
+	 * al creador como el primer miembro del mismo. 
+	 * Implementa una transacción SQL para asegurar que el grupo no se cree si
+	 * falla la vinculación del creador.
+	 * 
+	 * @param nombre Nombre único del grupo.
+	 * @param descripcion Breve texto descriptivo.
+	 * @param esPrivado Define si el grupo requiere contraseña para unirse.
+	 * @param contrasena Clave de acceso (será null si el grupo es público).
+	 * @param creador Nombre del usuario que funda el grupo.
+	 * @return true si el grupo y la pertenencia se registraron con éxito; false en caso de error.
+	 */
 	public boolean crearGrupo(String nombre, String descripcion, boolean esPrivado, String contrasena, String creador) {
 		try {
 			conexion.setAutoCommit(false);
 			String sqlGrupo = "INSERT INTO GRUPO (nombre, descripcion, es_privado, contrasena) VALUES (?, ?, ?, ?)";
+			// Utilizamos RETURN_GENERATED_KEYS para obtener el ID autonumérico creado por MySQL
 			PreparedStatement ps1 = conexion.prepareStatement(sqlGrupo, PreparedStatement.RETURN_GENERATED_KEYS);
 			ps1.setString(1, nombre);
 			ps1.setString(2, descripcion);
@@ -526,6 +613,7 @@ public class Modelo {
 			ps1.setString(4, esPrivado ? contrasena : null); // Si no es privado, guardamos null
 			ps1.executeUpdate();
 
+			// Recuperamos el ID generado por la base de datos para usarlo en la siguiente inserción
 			ResultSet rs = ps1.getGeneratedKeys();
 			int idGrupo = -1;
 			if (rs.next()) {
@@ -533,6 +621,7 @@ public class Modelo {
 			}
 			ps1.close();
 
+			// Si el grupo se creó, añadimos al usuario a la tabla PERTENECE_GRUPO
 			if (idGrupo != -1) {
 				String sqlPertenece = "INSERT INTO PERTENECE_GRUPO (nombreUsuario, id_grupo) VALUES (?, ?)";
 				PreparedStatement ps2 = conexion.prepareStatement(sqlPertenece);
@@ -541,6 +630,7 @@ public class Modelo {
 				ps2.executeUpdate();
 				ps2.close();
 
+				// Si ambas operaciones fueron exitosas, consolidamos los cambios en la BD
 				conexion.commit();
 				return true;
 			}
@@ -717,6 +807,13 @@ public class Modelo {
 		return this.url;
 	}
 	
+	/**
+     * Recupera el código OTP generado automáticamente por el motor de base de datos.
+     * Este método actúa como puente entre el Trigger de MySQL y el servicio de Email en Java.
+     * 
+     * @param usuario Nombre del usuario recién registrado
+     * @return El código alfanumérico de 6 caracteres o null si no se encuentra
+     */
 	public String obtenerUltimoOTP(String usuario) {
 	    String otp = null;
 	    // Buscamos el código más reciente generado para este usuario
@@ -738,7 +835,7 @@ public class Modelo {
 	    return this.conexion;
 	}
 
-	// 2. Para saber a quién estamos verificando en la ventana OTP
+	// Para saber a quién estamos verificando en la ventana OTP
 	private String ultimoUsuarioRegistrado;
 
 	public String getUltimoUsuarioRegistrado() {

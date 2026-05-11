@@ -492,13 +492,23 @@ public class _01_Registro extends JFrame implements Vista {
         return captchaGenerado;
     }
     
+    /**
+     * Genera una cadena alfanumérica aleatoria para el sistema de seguridad Captcha.
+     * Utiliza un conjunto predefinido de caracteres (A-Z, 0-9) para asegurar 
+     * la legibilidad y evitar ambigüedades visuales.
+     * 
+     * @author Hugo
+     * @return Una cadena de 5 caracteres aleatorios.
+     */
     private String generarTextoCaptcha() {
+    	// Definimos el conjunto de caracteres permitidos (alfanuméricos)
         String caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 5; i++) {
             int index = (int) (Math.random() * caracteres.length());
             sb.append(caracteres.charAt(index));
         }
+     // Devolvemos el token generado para su posterior validación
         return sb.toString();
     }
 }

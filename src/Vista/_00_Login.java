@@ -1,4 +1,12 @@
-//@autor: Ivan// Carlos
+/**
+ * Interfaz gráfica de acceso al sistema (Login).
+ * Esta clase gestiona la entrada de credenciales del usuario, la validación
+ * visual de campos obligatorios y la comunicación inicial con el controlador
+ * para el inicio de sesión y la configuración de la base de datos.
+ * 
+ * @author Ivan, Carlos
+ * @version 1.0
+ */
 package Vista;
 
 import java.awt.BorderLayout;
@@ -198,10 +206,19 @@ public class _00_Login extends JFrame implements Vista {
 		return txtUsu.getText();
 	}
 
+	/**
+     * Captura la contraseña introducida de forma segura.
+     * @return String convertido desde el array de caracteres de JPasswordField.
+     */
 	public String getTxtPwd() {
 		return String.valueOf(txtPwd.getPassword());
 	}
-
+	
+	/**
+     * Gestiona la respuesta visual tras un intento de autenticación.
+     * Dependiendo del resultado procesado por el modelo, redirige al usuario
+     * a la pantalla de inicio o muestra un mensaje de error en la interfaz.
+     */
 	public void login() {
 		String resultado = miModelo.getResultado();
 		if (resultado.equals("Correcto")) {
@@ -222,6 +239,11 @@ public class _00_Login extends JFrame implements Vista {
 		lblRespuesta.setText("");
 	}
 
+	/**
+     * Actualiza el estado de habilitación del botón de inicio de sesión.
+     * Implementa una lógica de validación en tiempo real que comprueba que los campos
+     * de usuario y contraseña no estén vacíos ni contengan únicamente espacios.
+     */
 	public void actualizarBoton() {
 		String user = txtUsu.getText();
 		String pass = String.valueOf(txtPwd.getPassword());

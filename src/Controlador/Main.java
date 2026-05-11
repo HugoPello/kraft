@@ -1,4 +1,11 @@
-// @Autor: Hugo
+/**
+ * Clase principal que actúa como el punto de entrada (Entry Point) de la aplicación.
+ * Se encarga de instanciar las capas del patrón MVC, inicializar el array de vistas
+ * y establecer las dependencias cruzadas entre el Modelo, el Controlador y las Vistas.
+ * 
+ * @author Hugo
+ * @version 1.0
+ */
 package Controlador;
 
 import javax.swing.JFrame;
@@ -26,12 +33,21 @@ import Vista._17_CrearGrupo;
 import Vista._18_VerificarOTP;
 
 public class Main {
+	
+		/**
+	     * Método principal que arranca el hilo de ejecución de la interfaz gráfica.
+	     * Gestiona la inicialización de las 19 ventanas del proyecto y define
+	     * el estado inicial de visibilidad del sistema.
+	     * 
+	     */
 		public static void main(String[] args) { 
 			
 		Controlador miControlador = new Controlador();
 		Modelo miModelo = new Modelo();
+		// Inicialización del contenedor de vistas
 		Vista[] misVistas = new Vista[19];
 		
+		// Cada índice corresponde a una funcionalidad específica de la aplicación
 		misVistas[0] = new _00_Login();
 		misVistas[1] =new _01_Registro();
 		misVistas[2] =new _02_Inicio();
@@ -53,18 +69,20 @@ public class Main {
 		misVistas[18] = new _18_VerificarOTP();
 
 
-		
-		
+		// Establecemos los vínculos necesarios para que las capas puedan comunicarse entre sí
 		miModelo.setVistas(misVistas);
 		miControlador.setVista(misVistas);
 		miControlador.setModelo(miModelo);
 		
+		// Recorremos el array para asignar el Modelo y el Controlador a cada vista
+        // y asegurar que todas inicien ocultas mediante un casting a JFrame
 		for (Vista vista : misVistas) {
 			vista.setModelo(miModelo);
 			vista.setControlador(miControlador);
 			((JFrame) vista).setVisible(false);
 		}
 		
+		// Iniciamos el flujo de la aplicación mostrando únicamente el Login
 		((JFrame) misVistas[0]).setVisible(true);
 		
 		

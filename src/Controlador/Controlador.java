@@ -1,3 +1,11 @@
+/**
+ * Clase controladora que actúa como intermediaria entre la Vista y el Modelo.
+ * Gestiona los eventos de usuario, la navegación entre ventanas y la invocación
+ * de servicios de mensajería externa.
+ * 
+ * @author Hugo
+ */
+
 package Controlador;
 
 import java.awt.Image;
@@ -121,8 +129,11 @@ public class Controlador {
 			System.exit(0);
 		}
 	}
-
-	// @Author: Hugo
+	
+	/**
+     * Gestiona el flujo de registro: Validación de entrada, Captcha, Inserción en BD
+     * y disparo del servicio de mensajería OTP.
+     */
 	public void registrarUsuario() {
 	    _01_Registro vistaReg = (_01_Registro) misVistas[1];
 
@@ -229,6 +240,12 @@ public class Controlador {
 	// GESTIÓN DE FICHEROS (FOTO DE PERFIL)
 	// =========================================================================
 
+	
+	/**
+     * Implementa la gestión de ficheros mediante NIO.2.
+     * Permite subir una imagen, crear el directorio local si no existe y 
+     * renombrar el archivo basándose en la sesión activa del usuario.
+     */
 	public void subirFotoPerfil() {
 		// 1. Abrir explorador de archivos de Windows
 		JFileChooser chooser = new JFileChooser();
@@ -726,10 +743,17 @@ public class Controlador {
 		vista.setDatosActuales(nombre, email);
 	}
 	
+	/**
+	 * Invoca el procedimiento almacenado en MySQL para validar el código OTP.
+	 * Gestiona la respuesta del servidor y, en caso de éxito, activa la sesión del usuario.
+	 * 
+	 * @param codigoIntroducido El token de 6 caracteres que el usuario recibió por email.
+	 */
 	public void validarCodigoOTP(String codigoIntroducido) {
 	    // Obtenemos el usuario que se acaba de registrar (puedes guardarlo en una variable global al registrar)
 	    String usr = miModelo.getUltimoUsuarioRegistrado(); 
 
+	    // Preparamos la llamada al procedimiento almacenado 'validate_otp'
 	    try (CallableStatement cst = (CallableStatement) miModelo.getConexion().prepareCall("{call validate_otp(?, ?)}")) {
 	        cst.setString(1, usr);
 	        cst.setString(2, codigoIntroducido);
