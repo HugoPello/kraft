@@ -25,7 +25,7 @@ public class _04_DentroActividad extends JFrame implements Vista {
 
 	private Controlador miControlador;
 	private Modelo miModelo;
-	
+
 	private JTable tablaHistorial;
 	private JTable tablaDisponibles;
 
@@ -61,11 +61,20 @@ public class _04_DentroActividad extends JFrame implements Vista {
 		header.add(headerRight, BorderLayout.EAST);
 
 		btnHome = crearBotonIcono("🏠");
-		btnHome.addActionListener(e -> { if (miControlador != null) miControlador.cambiarVentana(4, 2); });
+		btnHome.addActionListener(e -> {
+			if (miControlador != null)
+				miControlador.cambiarVentana(4, 2);
+		});
 		btnPerfil = crearBotonIcono("👤");
-		btnPerfil.addActionListener(e -> { if (miControlador != null) miControlador.cambiarVentana(4, 8); });
+		btnPerfil.addActionListener(e -> {
+			if (miControlador != null)
+				miControlador.cambiarVentana(4, 8);
+		});
 		btnActividades = crearBotonIcono("🏃");
-		btnActividades.addActionListener(e -> { if (miControlador != null) miControlador.cambiarVentana(4, 3); });
+		btnActividades.addActionListener(e -> {
+			if (miControlador != null)
+				miControlador.cambiarVentana(4, 3);
+		});
 
 		headerRight.add(btnHome);
 		headerRight.add(btnPerfil);
@@ -95,7 +104,7 @@ public class _04_DentroActividad extends JFrame implements Vista {
 		lblHistorial.setFont(new Font("Arial Black", Font.BOLD, 18));
 		panelIzquierdo.add(lblHistorial, BorderLayout.NORTH);
 
-		tablaHistorial = crearTablaEstilizada(new Object[][]{}, new String[]{"ACTIVIDAD", "FECHA"});
+		tablaHistorial = crearTablaEstilizada(new Object[][] {}, new String[] { "ACTIVIDAD", "FECHA" });
 		JScrollPane scrollIzquierdo = new JScrollPane(tablaHistorial);
 		scrollIzquierdo.setBorder(new LineBorder(Color.DARK_GRAY, 1));
 		panelIzquierdo.add(scrollIzquierdo, BorderLayout.CENTER);
@@ -109,7 +118,8 @@ public class _04_DentroActividad extends JFrame implements Vista {
 		lblSeleccion.setFont(new Font("Arial Black", Font.BOLD, 18));
 		panelDerecho.add(lblSeleccion, BorderLayout.NORTH);
 
-		tablaDisponibles = crearTablaEstilizada(new Object[][]{}, new String[]{"ACTIVIDADES DISPONIBLES", "DIFICULTAD"});
+		tablaDisponibles = crearTablaEstilizada(new Object[][] {},
+				new String[] { "ACTIVIDADES DISPONIBLES", "DIFICULTAD" });
 		JScrollPane scrollDerecho = new JScrollPane(tablaDisponibles);
 		scrollDerecho.setBorder(new LineBorder(NARANJA, 1));
 		panelDerecho.add(scrollDerecho, BorderLayout.CENTER);
@@ -122,7 +132,8 @@ public class _04_DentroActividad extends JFrame implements Vista {
 		btnCompletar.setFont(new Font("Arial Black", Font.BOLD, 16));
 		btnCompletar.setFocusPainted(false);
 		btnCompletar.addActionListener(e -> {
-			if (miControlador != null) miControlador.completarActividad();
+			if (miControlador != null)
+				miControlador.completarActividad();
 		});
 		panelDerecho.add(btnCompletar, BorderLayout.SOUTH);
 
@@ -131,7 +142,10 @@ public class _04_DentroActividad extends JFrame implements Vista {
 
 	private JTable crearTablaEstilizada(Object[][] datos, String[] columnas) {
 		DefaultTableModel modelo = new DefaultTableModel(datos, columnas) {
-			@Override public boolean isCellEditable(int r, int c) { return false; }
+			@Override
+			public boolean isCellEditable(int r, int c) {
+				return false;
+			}
 		};
 		JTable tabla = new JTable(modelo);
 		tabla.setBackground(GRIS_RECTANGULO);
@@ -171,43 +185,54 @@ public class _04_DentroActividad extends JFrame implements Vista {
 		boton.setBorder(null);
 		boton.setFocusPainted(false);
 		boton.addMouseListener(new MouseAdapter() {
-			@Override public void mouseEntered(MouseEvent e) { boton.setBackground(colorHover); }
-			@Override public void mouseExited(MouseEvent e) { boton.setBackground(new Color(15, 15, 15)); }
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				boton.setBackground(colorHover);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				boton.setBackground(new Color(15, 15, 15));
+			}
 		});
 	}
-	
+
 	// --- MÉTODOS AÑADIDOS PARA COMUNICACIÓN CON CONTROLADOR ---
-	
+
 	public String getActividadSeleccionada() {
 		int filaSeleccionada = tablaDisponibles.getSelectedRow();
 		// Si es -1, significa que no ha seleccionado nada
 		if (filaSeleccionada == -1) {
-			return null; 
+			return null;
 		}
 		// Devolvemos el texto de la columna 0 (el nombre)
 		return tablaDisponibles.getValueAt(filaSeleccionada, 0).toString();
 	}
-	
+
 	public void mostrarMensaje(String msg) {
 		JOptionPane.showMessageDialog(this, msg, "Información de Actividad", JOptionPane.INFORMATION_MESSAGE);
 	}
-	
+
 	public void cargarDatosTablas() {
 		// 1. Llenar tabla disponibles por filtro
 		Object[][] datosFiltrados = miControlador.getTablaActividadesPorTipo();
-		tablaDisponibles.setModel(new DefaultTableModel(datosFiltrados, new String[]{"ACTIVIDADES DISPONIBLES", "DIFICULTAD"}));
-		
+		tablaDisponibles.setModel(
+				new DefaultTableModel(datosFiltrados, new String[] { "ACTIVIDADES DISPONIBLES", "DIFICULTAD" }));
+
 		// 2. Llenar tabla historial
 		Object[][] datosHistorial = miControlador.getTablaHistorialUsuario();
-		tablaHistorial.setModel(new DefaultTableModel(datosHistorial, new String[]{"HISTORIAL RECIENTE", "FECHA"}));
+		tablaHistorial.setModel(new DefaultTableModel(datosHistorial, new String[] { "HISTORIAL RECIENTE", "FECHA" }));
 	}
 
-	@Override public void setModelo(Modelo miModelo) { this.miModelo = miModelo; }
-	
-	@Override 
-	public void setControlador(Controlador miControlador) { 
-		this.miControlador = miControlador; 
-		
+	@Override
+	public void setModelo(Modelo miModelo) {
+		this.miModelo = miModelo;
+	}
+
+	@Override
+	public void setControlador(Controlador miControlador) {
+		this.miControlador = miControlador;
+
 		this.addComponentListener(new ComponentAdapter() {
 			@Override
 			public void componentShown(ComponentEvent e) {

@@ -150,20 +150,20 @@ public class Modelo {
 		String email = "";
 		String usr = getUsuarioLogueado();
 		String query = "SELECT correo FROM USERS WHERE USR = ?";
-		
+
 		try {
 			PreparedStatement pstmt = conexion.prepareStatement(query);
 			pstmt.setString(1, usr);
 			ResultSet rset = pstmt.executeQuery();
-			
-			if(rset.next()){
-				email = rset.getString("correo"); 
+
+			if (rset.next()) {
+				email = rset.getString("correo");
 			}
 			pstmt.close();
-		} catch(Exception e) {
+		} catch (Exception e) {
 			System.err.println("Error al sacar email: " + e.getMessage());
 		}
-		
+
 		return email;
 	}
 
@@ -412,18 +412,18 @@ public class Modelo {
 		}
 		return stats;
 	}
-	
+
 	public boolean actualizarAjustes(String usrActual, String nuevoUsr, String nuevoCorreo, String nuevaPwd) {
 		// 1. Empezamos a construir la query básica (Nombre y Correo)
 		StringBuilder sql = new StringBuilder("UPDATE USERS SET USR = ?, correo = ?");
-		
+
 		// 2. Comprobamos si el usuario ha escrito una nueva contraseña
 		boolean cambiarPwd = (nuevaPwd != null && !nuevaPwd.trim().isEmpty());
-		
+
 		if (cambiarPwd) {
 			sql.append(", PWD = ?"); // Añadimos la columna de la contraseña
 		}
-		
+
 		// 3. Añadimos el final de la query
 		sql.append(" WHERE USR = ?");
 
@@ -431,18 +431,18 @@ public class Modelo {
 			java.sql.PreparedStatement ps = conexion.prepareStatement(sql.toString());
 			ps.setString(1, nuevoUsr);
 			ps.setString(2, nuevoCorreo);
-			
+
 			// 4. Asignamos los parámetros dependiendo de si hay contraseña o no
 			if (cambiarPwd) {
 				ps.setString(3, nuevaPwd);
 				ps.setString(4, usrActual);
 			} else {
 				// Si no hay contraseña, el parámetro 3 pasa a ser el usrActual del WHERE
-				ps.setString(3, usrActual); 
+				ps.setString(3, usrActual);
 			}
-			
+
 			return ps.executeUpdate() > 0;
-			
+
 		} catch (java.sql.SQLException e) {
 			System.err.println("Error al actualizar perfil: " + e.getMessage());
 			return false;
@@ -453,19 +453,77 @@ public class Modelo {
 	// 5. GESTIÓN DE ACTIVIDADES, MISIONES Y EVENTOS
 	// =========================================================================
 
-	public boolean crearActividad(String nombre, String tipo, String dificultad, int puntos, String frecuencia, String unidad, double meta) {
-		String sql = "INSERT INTO ACTIVIDADES (nombre, tipo, dificultad, puntos, frecuencia, unidad_medida, meta_cantidad) VALUES (?, ?, ?, ?, ?, ?, ?)";
-		try (PreparedStatement pstmt = conexion.prepareStatement(sql)) {
-			pstmt.setString(1, nombre);
-			pstmt.setString(2, tipo);
-			pstmt.setString(3, dificultad);
-			pstmt.setInt(4, puntos);
-			pstmt.setString(5, frecuencia);
-			pstmt.setString(6, unidad);
-			pstmt.setDouble(7, meta);
-			return pstmt.executeUpdate() > 0;
+	public boolean crearActividad(String nombre, String tipo, String dificultad, int puntos, String frecuencia,
+			String unidad, double meta) {
+		try {
+			// 0. Iniciamos la transacción (El combo 3x1)
+			conexion.setAutoCommit(false);
+
+			// 1. CREAMOS LA ACTIVIDAD y sacamos su ID generado
+			String sqlActividad = "INSERT INTO ACTIVIDADES (nombre, tipo, dificultad, puntos, frecuencia, unidad_medida, meta_cantidad) VALUES (?, ?, ?, ?, ?, ?, ?)";
+			PreparedStatement ps1 = conexion.prepareStatement(sqlActividad, java.sql.Statement.RETURN_GENERATED_KEYS);
+			ps1.setString(1, nombre);
+			ps1.setString(2, tipo);
+			ps1.setString(3, dificultad);
+			ps1.setInt(4, puntos);
+			ps1.setString(5, frecuencia);
+			ps1.setString(6, unidad);
+			ps1.setDouble(7, meta);
+			ps1.executeUpdate();
+
+			ResultSet rsActividad = ps1.getGeneratedKeys();
+			int idActividad = -1;
+			if (rsActividad.next())
+				idActividad = rsActividad.getInt(1);
+			ps1.close();
+
+			// 2. CREAMOS LA MISIÓN AUTOMÁTICA y sacamos su ID generado
+			// El texto se autogenera: "Completar 5.0 Km de Running"
+			String descMision = "Hacer " + meta + " " + unidad + " de " + nombre;
+			int recompensaMision = puntos * 2; // La misión da el doble de puntos que la actividad suelta
+			String tipoMision = (frecuencia.equalsIgnoreCase("Semanal")) ? "Semanal" : "Diaria";
+
+			String sqlMision = "INSERT INTO MISIONES (descripcion, recompensa, tipo) VALUES (?, ?, ?)";
+			PreparedStatement ps2 = conexion.prepareStatement(sqlMision, java.sql.Statement.RETURN_GENERATED_KEYS);
+			ps2.setString(1, descMision);
+			ps2.setInt(2, recompensaMision);
+			ps2.setString(3, tipoMision);
+			ps2.executeUpdate();
+
+			ResultSet rsMision = ps2.getGeneratedKeys();
+			int idMision = -1;
+			if (rsMision.next())
+				idMision = rsMision.getInt(1);
+			ps2.close();
+
+			// 3. CREAMOS EL PUENTE (El enlace automático)
+			if (idActividad != -1 && idMision != -1) {
+				String sqlPuente = "INSERT INTO MISION_ACTIVIDAD (id_mision, id_actividad, cantidad_requerida) VALUES (?, ?, ?)";
+				PreparedStatement ps3 = conexion.prepareStatement(sqlPuente);
+				ps3.setInt(1, idMision);
+				ps3.setInt(2, idActividad);
+				ps3.setDouble(3, meta);
+				ps3.executeUpdate();
+				ps3.close();
+			}
+
+			// Si todo ha ido bien, confirmamos los 3 INSERTS
+			conexion.commit();
+			return true;
+
 		} catch (SQLException e) {
+			System.err.println("Error en el Combo 3x1 de Crear Actividad: " + e.getMessage());
+			try {
+				// Si algo explota, deshacemos todo para no romper la base de datos
+				conexion.rollback();
+			} catch (SQLException ex) {
+			}
 			return false;
+		} finally {
+			try {
+				conexion.setAutoCommit(true); // Devolvemos la conexión a su estado normal
+			} catch (SQLException ex) {
+			}
 		}
 	}
 
@@ -475,73 +533,87 @@ public class Modelo {
 			PreparedStatement ps1 = conexion.prepareStatement("SELECT id_actividad FROM ACTIVIDADES WHERE nombre = ?");
 			ps1.setString(1, nombreActividad);
 			ResultSet rs = ps1.executeQuery();
-			if (rs.next()) idActividad = rs.getInt("id_actividad");
+			if (rs.next())
+				idActividad = rs.getInt("id_actividad");
 			ps1.close();
 
 			if (idActividad != -1) {
-				PreparedStatement ps2 = conexion.prepareStatement("INSERT INTO COMPLETAR_ACTIVIDAD (nombreUsuario, id_actividad, cantidad) VALUES (?, ?, ?)");
+				PreparedStatement ps2 = conexion.prepareStatement(
+						"INSERT INTO COMPLETAR_ACTIVIDAD (nombreUsuario, id_actividad, cantidad) VALUES (?, ?, ?)");
 				ps2.setString(1, usr);
 				ps2.setInt(2, idActividad);
 				ps2.setDouble(3, cantidad);
 				return ps2.executeUpdate() > 0;
 			}
-		} catch (SQLException e) { }
+		} catch (SQLException e) {
+		}
 		return false;
 	}
-	
+
 	public void actualizarProgresoMisiones(String usr, String nombreActividad, double cantidad) {
-		String sql = "UPDATE REALIZA_MISION RM " +
-					 "JOIN MISION_ACTIVIDAD MA ON RM.id_mision = MA.id_mision " +
-					 "JOIN ACTIVIDADES A ON MA.id_actividad = A.id_actividad " +
-					 "SET RM.progreso = RM.progreso + ? " +
-					 "WHERE RM.nombreUsuario = ? AND A.nombre = ? AND RM.fecha_asignacion = CURRENT_DATE";
+		String sql = "UPDATE REALIZA_MISION RM " + "JOIN MISION_ACTIVIDAD MA ON RM.id_mision = MA.id_mision "
+				+ "JOIN ACTIVIDADES A ON MA.id_actividad = A.id_actividad " + "SET RM.progreso = RM.progreso + ? "
+				+ "WHERE RM.nombreUsuario = ? AND A.nombre = ? AND RM.fecha_asignacion = CURRENT_DATE";
 		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
 			ps.setDouble(1, cantidad);
 			ps.setString(2, usr);
 			ps.setString(3, nombreActividad);
-			ps.executeUpdate();
-			
+			int actualizados = ps.executeUpdate();
+
+			if (actualizados > 0) {
+				System.out.println("Progreso sumado correctamente en BD.");
+			}
+
 			// Marcar como completada si llegó a la meta
-			String sqlCheck = "UPDATE REALIZA_MISION RM JOIN MISION_ACTIVIDAD MA ON RM.id_mision = MA.id_mision " +
-							  "SET RM.completada = TRUE WHERE RM.nombreUsuario = ? AND RM.fecha_asignacion = CURRENT_DATE AND RM.progreso >= MA.cantidad_requerida";
+			String sqlCheck = "UPDATE REALIZA_MISION RM JOIN MISION_ACTIVIDAD MA ON RM.id_mision = MA.id_mision "
+					+ "SET RM.completada = TRUE WHERE RM.nombreUsuario = ? AND RM.fecha_asignacion = CURRENT_DATE AND RM.progreso >= MA.cantidad_requerida";
 			PreparedStatement psCheck = conexion.prepareStatement(sqlCheck);
 			psCheck.setString(1, usr);
 			psCheck.executeUpdate();
-		} catch (SQLException e) { }
+
+		} catch (SQLException e) {
+			// ¡MUY IMPORTANTE IMPRIMIR EL ERROR!
+			System.err.println("Error al sumar progreso en misiones: " + e.getMessage());
+		}
 	}
+
 	public boolean tieneMisionesHoy(String usr) {
 		String sql = "SELECT COUNT(*) FROM REALIZA_MISION WHERE nombreUsuario = ? AND fecha_asignacion = CURRENT_DATE";
 		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
 			ps.setString(1, usr);
 			ResultSet rs = ps.executeQuery();
-			if (rs.next()) return rs.getInt(1) > 0;
-		} catch (SQLException e) {}
+			if (rs.next())
+				return rs.getInt(1) > 0;
+		} catch (SQLException e) {
+		}
 		return false;
 	}
 
 	public void generarMisionesDiarias(String usr) {
 		try {
 			// Insertar 3 Diarias
-			String sqlDiarias = "INSERT INTO REALIZA_MISION (nombreUsuario, id_mision, fecha_asignacion) " +
-								"SELECT ?, id_mision, CURRENT_DATE FROM MISIONES WHERE tipo = 'Diaria' ORDER BY RAND() LIMIT 3";
+			String sqlDiarias = "INSERT INTO REALIZA_MISION (nombreUsuario, id_mision, fecha_asignacion) "
+					+ "SELECT ?, id_mision, CURRENT_DATE FROM MISIONES WHERE tipo = 'Diaria' ORDER BY RAND() LIMIT 3";
 			PreparedStatement ps1 = conexion.prepareStatement(sqlDiarias);
 			ps1.setString(1, usr);
 			ps1.executeUpdate();
-			
+
 			// Insertar 1 Semanal
-			String sqlSemanales = "INSERT INTO REALIZA_MISION (nombreUsuario, id_mision, fecha_asignacion) " +
-								  "SELECT ?, id_mision, CURRENT_DATE FROM MISIONES WHERE tipo = 'Semanal' ORDER BY RAND() LIMIT 1";
+			String sqlSemanales = "INSERT INTO REALIZA_MISION (nombreUsuario, id_mision, fecha_asignacion) "
+					+ "SELECT ?, id_mision, CURRENT_DATE FROM MISIONES WHERE tipo = 'Semanal' ORDER BY RAND() LIMIT 1";
 			PreparedStatement ps2 = conexion.prepareStatement(sqlSemanales);
 			ps2.setString(1, usr);
 			ps2.executeUpdate();
-		} catch (SQLException e) { System.err.println("Error generando misiones: " + e.getMessage()); }
+		} catch (SQLException e) {
+			System.err.println("Error generando misiones: " + e.getMessage());
+		}
 	}
 
 	public ArrayList<Object[]> obtenerMisionesHoy(String usr, String tipo) {
 		ArrayList<Object[]> lista = new ArrayList<>();
-		String sql = "SELECT M.descripcion, RM.progreso, M.recompensa, RM.completada " +
-					 "FROM MISIONES M JOIN REALIZA_MISION RM ON M.id_mision = RM.id_mision " +
-					 "WHERE RM.nombreUsuario = ? AND M.tipo = ? AND RM.fecha_asignacion = CURRENT_DATE";
+		String sql = "SELECT M.descripcion, RM.progreso, M.recompensa, RM.completada "
+				+ "FROM MISIONES M JOIN REALIZA_MISION RM ON M.id_mision = RM.id_mision "
+				+ "WHERE RM.nombreUsuario = ? AND M.tipo = ? AND RM.fecha_asignacion = CURRENT_DATE";
 		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
 			ps.setString(1, usr);
 			ps.setString(2, tipo);
@@ -550,7 +622,8 @@ public class Modelo {
 				String estado = rs.getBoolean("completada") ? "✅ HECHA" : "Progreso: " + rs.getDouble("progreso");
 				lista.add(new Object[] { rs.getString("descripcion"), estado, rs.getInt("recompensa") + " EXP" });
 			}
-		} catch (SQLException e) {}
+		} catch (SQLException e) {
+		}
 		return lista;
 	}
 

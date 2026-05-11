@@ -126,17 +126,15 @@ public class _02_Inicio extends JFrame implements Vista {
 		rectDerecho.add(crearScrollMision(modeloSemanales));
 		panelCentral.add(rectDerecho);
 
-		this.addWindowListener(new WindowAdapter() {
-			@Override
-			public void windowOpened(WindowEvent e) {
-				// Este código solo se ejecuta cuando la ventana se vuelve visible
-				if (miControlador != null) {
-					cargarNoticias();
-					miControlador.gestionarMisionesDiarias();
-
-				}
-			}
-		});
+		this.addComponentListener(new java.awt.event.ComponentAdapter() {
+	        @Override
+	        public void componentShown(java.awt.event.ComponentEvent e) {
+	            if (miControlador != null) {
+	                cargarNoticias();
+	        		miControlador.gestionarMisionesDiarias(); 
+	            }
+	        }
+	    });
 	}
 
 	private JButton crearBotonIcono(String icono, int ventanaDestino) {
