@@ -841,4 +841,55 @@ public class Modelo {
 	public String getUltimoUsuarioRegistrado() {
 	    return this.ultimoUsuarioRegistrado;
 	}
+	/**
+	 * Obtiene los logros que el usuario aún NO ha completado.
+	 * Los logros con 'esta_hecho = true' no aparecerán en esta lista.
+	 */
+	/**
+	 * Obtiene los logros pendientes y su porcentaje de progreso actual.
+	 * Filtra los logros para que desaparezcan una vez marcados como 'hechos'.
+	 */
+	public Object[][] obtenerLogrosPendientes(String usuario) {
+	    // Usamos COALESCE para devolver 0 si el usuario aún no tiene registro de progreso
+	    String sql = "SELECT L.nombre, L.descripcion, L.puntos_logros, COALESCE(HL.progreso, 0) " +
+	                 "FROM LOGROS L " +
+	                 "LEFT JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro AND HL.nombreUsuario = ? " +
+	                 "WHERE HL.esta_hecho IS NULL OR HL.esta_hecho = 0";
+	    
+	    // El motor genérico se encarga de ejecutar la consulta y devolver el array
+	    return obtenerDatosTabla(sql, 4, usuario);
+	}
+
+	/**
+	 * Registra un logro como completado al 100% y lo marca para que no vuelva a aparecer.
+	 */
+	public boolean completarLogroEnBD(String usuario, String nombreLogro) {
+	    String sqlBusqueda = "SELECT id_logro FROM LOGROS WHERE nombre = ?";
+	    // ON DUPLICATE KEY UPDATE permite actualizar si ya existía progreso previo
+	    String sqlInsert = "INSERT INTO HACER_LOGRO (nombreUsuario, id_logro, fecha_desbloqueo, esta_hecho, progreso) " +
+	                       "VALUES (?, ?, CURRENT_TIMESTAMP, 1, 100) " +
+	                       "ON DUPLICATE KEY UPDATE esta_hecho = 1, progreso = 100";
+
+	    try {
+	        PreparedStatement ps = conexion.prepareStatement(sqlBusqueda);
+	        ps.setString(1, nombreLogro);
+	        ResultSet rs = ps.executeQuery();
+
+	        if (rs.next()) {
+	            int id = rs.getInt("id_logro");
+	            PreparedStatement psIns = conexion.prepareStatement(sqlInsert);
+	            psIns.setString(1, usuario);
+	            psIns.setInt(2, id);
+	            return psIns.executeUpdate() > 0;
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error SQL: " + e.getMessage());
+	    }
+	    return false;
+	}
+	/**
+	 * Marca un logro como completado y lo añade al historial del perfil.
+	 */
+	
+	
 }

@@ -32,6 +32,7 @@ import Vista._00_Login;
 import Vista._01_Registro;
 import Vista._02_Inicio;
 import Vista._04_DentroActividad;
+import Vista._05_Logros;
 import Vista._08_PerfilUsuario;
 import Vista._09_OlvidoContraseña;
 import Vista._10_CrearEventoAdmin;
@@ -766,6 +767,24 @@ public class Controlador {
 	        // Aquí capturamos el SIGNAL SQLSTATE '45000' que configuramos en MySQL
 	        JOptionPane.showMessageDialog(null, e.getMessage(), "Error de Verificación", JOptionPane.ERROR_MESSAGE);
 	    }
+	}
+	public void marcarLogroCompletado(String nombreLogro) {
+	    String usuario = miModelo.getUsuarioLogueado();
+	    if (miModelo.completarLogroEnBD(usuario, nombreLogro)) {
+	        // Refrescamos la vista de logros para que desaparezca el que acabamos de completar
+	        ((_05_Logros) misVistas[5]).cargarDatosLogros();
+	        
+	        // Opcional: Actualizar la vista de perfil si está abierta
+	        if (misVistas[8] instanceof _08_PerfilUsuario) {
+	            alAbrirPerfil();
+	        }
+	    }
+	}
+	/**
+	 * Obtiene la lista de logros que el usuario aún no ha completado.
+	 */
+	public Object[][] getTablaLogrosDisponibles() {
+	    return miModelo.obtenerLogrosPendientes(miModelo.getUsuarioLogueado());
 	}
 	
 }
