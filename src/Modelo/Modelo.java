@@ -1,3 +1,12 @@
+/**
+ * Clase que gestiona la lógica de negocio y la persistencia de datos.
+ * Se comunica con la base de datos MySQL mediante JDBC y gestiona el estado
+ * de la sesión del usuario.
+ * 
+ * @author Hugo
+ * @version 1.0
+ */
+
 package Modelo;
 
 import java.io.BufferedReader;
@@ -41,6 +50,12 @@ public class Modelo {
 	}
 
 	// LECTURA FICHERO
+	
+	/**
+	 * Carga los parámetros de conexión desde un archivo externo .ini.
+	 * Permite que la aplicación sea portable sin necesidad de recompilar el código 
+	 * ante cambios en el servidor de base de datos.
+	 */
 	public void leerConfig() {
 		try (BufferedReader br = new BufferedReader(new FileReader("config.ini"))) {
 			// Aplicamos la limpieza a cada línea leída
@@ -80,17 +95,26 @@ public class Modelo {
 				conexion.close();
 			}
 
-
 		} catch (Exception ex) {
 			System.err.println("Error al actualizar y conectar: " + ex.getMessage());
 		}
 	}
 
+	/**
+	 * Establece la conexión física con el servidor de base de datos MySQL.
+	 * Carga el driver JDBC dinámicamente y utiliza las credenciales obtenidas
+	 * del archivo de configuración para abrir un socket de comunicación.
+	 * 
+	 * @return true si la conexión se establece o ya estaba abierta; false si hay error de red o credenciales.
+	 */
 	public boolean conectarBD() {
 		try {
 			System.out.println("Conectando a: " + url);
+			
+			// Verificación de estado: Solo intentamos conectar si la conexión es nula o se ha cerrado
 			if (conexion == null || conexion.isClosed()) {
 				Class.forName("com.mysql.cj.jdbc.Driver");
+				// Intento de autenticación mediante el DriverManager utilizando la URL y credenciales del .ini
 				conexion = DriverManager.getConnection(url, login, pwdDB);
 				System.out.println("-> Conexión establecida");
 			}
@@ -147,10 +171,41 @@ public class Modelo {
 		return this.ROL;
 	}
 
+	public String sacarEmail() {
+		String email = "";
+		String usr = getUsuarioLogueado();
+		String query = "SELECT correo FROM USERS WHERE USR = ?";
+		
+		try {
+			PreparedStatement pstmt = conexion.prepareStatement(query);
+			pstmt.setString(1, usr);
+			ResultSet rset = pstmt.executeQuery();
+			
+			if(rset.next()){
+				email = rset.getString("correo"); 
+			}
+			pstmt.close();
+		} catch(Exception e) {
+			System.err.println("Error al sacar email: " + e.getMessage());
+		}
+		
+		return email;
+	}
+
 	// =========================================================================
 	// 3. MOTORES GENÉRICOS DE CONSULTA
 	// =========================================================================
 
+	
+	/**
+     * Motor de consulta genérico para obtener datos de una columna específica.
+     * Utiliza Varargs para permitir un número dinámico de parámetros en el PreparedStatement.
+     * 
+     * @param query Sentencia SQL con marcadores '?'
+     * @param nombreColumna Etiqueta de la columna a extraer
+     * @param parametros Valores para inyectar en los marcadores de la query
+     * @return Array de String con los resultados o mensaje de "No hay datos"
+     */
 	public String[] obtenerDatosColumna(String query, String nombreColumna, Object... parametros) {
 		ArrayList<String> listaDatos = new ArrayList<>();
 
@@ -219,108 +274,96 @@ public class Modelo {
 	// =========================================================================
 	// 4. AUTENTICACIÓN Y GESTIÓN DE USUARIOS
 	// =========================================================================
-
+	
+	
+	/**
+	 * Realiza la validación de credenciales del usuario contra la base de datos.
+	 * El acceso solo se permite si el usuario existe, la contraseña coincide 
+	 * y el campo 'is_verified' es igual a 1 (activación por OTP).
+	 * 
+	 * @param usr Identificador del usuario.
+	 * @param pwd Contraseña introducida.
+	 */
 	public void loginSeguro(String usr, String pwd) {
-        // Pon el nombre de la tabla EXACTAMENTE igual que lo creaste en Aiven (por ej. USERS)
-        String query = "SELECT * FROM USERS WHERE USR=? AND PWD=?";
-        try {
-            PreparedStatement pstmt = conexion.prepareStatement(query);
-            pstmt.setString(1, usr);
-            pstmt.setString(2, pwd);
-            ResultSet rset = pstmt.executeQuery();
+		String query = "SELECT * FROM USERS WHERE USR=? AND PWD=? AND is_verified=1";
+		try {
+			PreparedStatement pstmt = conexion.prepareStatement(query);
+			pstmt.setString(1, usr);
+			pstmt.setString(2, pwd);
+			ResultSet rset = pstmt.executeQuery();
 
-            if (rset.next()) {
-                resultado = "Correcto";
-                this.ROL = rset.getBoolean("ROL");
-                this.fallos = 0;
+			if (rset.next()) {
+				resultado = "Correcto";
+				this.ROL = rset.getBoolean("ROL");
+				this.fallos = 0;
+			} else {
+				fallos++;
+				resultado = (fallos == 3) ? "Cerrar" : "Incorrecto";
+			}
+		} catch (SQLException e) {
+			System.err.println("=== ERROR SQL EN LOGIN ===");
+			e.printStackTrace(); // Esto te dirá el fallo real (tabla no existe, etc)
+			resultado = "ErrorBD"; // Blindamos el resultado para que no sea null
+		}
+	}
+
+	/**
+     * Realiza un registro atómico del usuario utilizando transacciones SQL.
+     * Garantiza que el usuario no se cree si falla la inserción en la tabla de seguridad.
+     * 
+     * @param usr Nombre de identificación único
+     * @param pwd Contraseña (texto plano por requerimiento de proyecto)
+     * @param correo Dirección de email para el sistema 2FA
+     * @return true si el commit se realizó con éxito; false si hubo rollback
+     */
+	public boolean registroCompleto(String usr, String pwd, boolean rol, String fechaNac, int idPregunta,
+            String respuesta, String correo) {
+        try {
+            conexion.setAutoCommit(false); // Iniciamos transacción
+
+            // 1. Insertamos en USERS incluyendo el correo y el estado de verificación inicial
+            String query1 = "INSERT INTO USERS (USR, PWD, ROL, correo, fechaNacimiento, is_verified) VALUES (?, ?, ?, ?, ?, 0)";
+            PreparedStatement ps1 = conexion.prepareStatement(query1);
+            ps1.setString(1, usr);
+            ps1.setString(2, pwd);
+            ps1.setBoolean(3, rol);
+            ps1.setString(4, correo); // El correo del usuario para el 2FA
+
+            if (fechaNac == null || fechaNac.trim().isEmpty()) {
+                ps1.setNull(5, java.sql.Types.DATE);
             } else {
-                fallos++;
-                resultado = (fallos == 3) ? "Cerrar" : "Incorrecto";
+                ps1.setDate(5, java.sql.Date.valueOf(fechaNac));
             }
-        } catch (SQLException e) {
-            System.err.println("=== ERROR SQL EN LOGIN ===");
-            e.printStackTrace(); // Esto te dirá el fallo real (tabla no existe, etc)
-            resultado = "ErrorBD"; // Blindamos el resultado para que no sea null
+            ps1.executeUpdate();
+
+            // 2. Insertamos la pregunta de seguridad en tu segunda tabla
+            String query2 = "INSERT INTO RESPONDE_PREGUNTA (nombreUsuario, id_pregunta, respuesta_texto) VALUES (?, ?, ?)";
+            PreparedStatement ps2 = conexion.prepareStatement(query2);
+            ps2.setString(1, usr);
+            ps2.setInt(2, idPregunta);
+            ps2.setString(3, respuesta);
+            ps2.executeUpdate();
+
+            conexion.commit(); // Si todo va bien, guardamos cambios
+            this.ultimoUsuarioRegistrado = usr;
+            return true;
+
+        } catch (Exception e) {
+            try {
+                conexion.rollback(); // Si algo falla, deshacemos todo
+            } catch (Exception ex) {}
+            System.err.println("Error en registro: " + e.getMessage());
+            return false;
+        } finally {
+            try {
+                conexion.setAutoCommit(true);
+            } catch (Exception ex) {}
         }
     }
 
-	public boolean registroCompleto(String usr, String pwd, boolean rol, String fechaNac, int idPregunta,
-			String respuesta) {
-		try {
-			conexion.setAutoCommit(false);
-
-			String query1 = "INSERT INTO users (USR, PWD, ROL, fechaNacimiento) VALUES (?, ?, ?, ?)";
-			PreparedStatement ps1 = conexion.prepareStatement(query1);
-			ps1.setString(1, usr);
-			ps1.setString(2, pwd);
-			ps1.setBoolean(3, rol);
-
-			if (fechaNac == null || fechaNac.trim().isEmpty()) {
-				ps1.setNull(4, java.sql.Types.DATE);
-			} else {
-				ps1.setDate(4, java.sql.Date.valueOf(fechaNac));
-			}
-			ps1.executeUpdate();
-
-			String query2 = "INSERT INTO responde_pregunta (nombreUsuario, id_pregunta, respuesta_texto) VALUES (?, ?, ?)";
-			PreparedStatement ps2 = conexion.prepareStatement(query2);
-			ps2.setString(1, usr);
-			ps2.setInt(2, idPregunta);
-			ps2.setString(3, respuesta);
-			ps2.executeUpdate();
-
-			conexion.commit();
-			return true;
-
-		} catch (Exception e) {
-			try {
-				conexion.rollback();
-			} catch (Exception ex) {
-			}
-			return false;
-
-		} finally {
-			try {
-				conexion.setAutoCommit(true);
-			} catch (Exception ex) {
-			}
-		}
-	}
-
-	public boolean existeUsuario(String usr) {
-		String query = "SELECT USR FROM users WHERE USR = ?";
-		try (PreparedStatement pstmt = conexion.prepareStatement(query)) {
-			pstmt.setString(1, usr);
-			ResultSet rs = pstmt.executeQuery();
-			return rs.next();
-		} catch (SQLException e) {
-			return false;
-		}
-	}
-
-	public int modificar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE users SET PWD = ? WHERE USR = ?")) {
-			pstmt.setString(1, pwd);
-			pstmt.setString(2, usr);
-			return pstmt.executeUpdate();
-		} catch (SQLException e) {
-			return 0;
-		}
-	}
-
-	public int borrar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM users WHERE usr = ? AND pwd=?")) {
-			pstmt.setString(1, usr);
-			pstmt.setString(2, pwd);
-			return pstmt.executeUpdate();
-		} catch (SQLException e) {
-			return 0;
-		}
-	}
-
 	public ArrayList<Object[]> obtenerDatosUsuarios() {
 		ArrayList<Object[]> listaUsuarios = new ArrayList<>();
-		try (PreparedStatement pstmt = conexion.prepareStatement("SELECT USR, PWD FROM users");
+		try (PreparedStatement pstmt = conexion.prepareStatement("SELECT USR, PWD FROM USERS");
 				ResultSet rs = pstmt.executeQuery()) {
 
 			while (rs.next()) {
@@ -331,14 +374,109 @@ public class Modelo {
 		return listaUsuarios;
 	}
 
+	/**
+	 * Inserta un nuevo usuario en el sistema con permisos de usuario estándar (ROL = false).
+	 * Este método es utilizado por el panel de administración para el alta manual de cuentas.
+	 * 
+	 * @param usr Nombre de usuario único para el nuevo registro.
+	 * @param pwd Contraseña asociada a la cuenta.
+	 * @return true si el usuario se insertó correctamente (filas afectadas > 0); false si hubo un error (ej. usuario duplicado).
+	 */
 	public boolean insertarUsuarioAdmin(String usr, String pwd) {
-		String query = "INSERT INTO users (USR, PWD, ROL) VALUES (?, ?, ?)";
+		// Definimos la consulta parametrizada para prevenir ataques de Inyección SQL
+		String query = "INSERT INTO USERS (USR, PWD, ROL) VALUES (?, ?, ?)";
 		try (PreparedStatement ps = conexion.prepareStatement(query)) {
 			ps.setString(1, usr);
 			ps.setString(2, pwd);
+			// Por defecto, las altas manuales desde el panel se crean como usuarios estándar
 			ps.setBoolean(3, false);
 			return ps.executeUpdate() > 0;
 		} catch (SQLException e) {
+			return false;
+		}
+	}
+
+	// --- MÉTODOS PARA RECUPERACIÓN DE CONTRASEÑA Y PERFIL ---
+
+	// Verifica si la respuesta secreta coincide con la de la BD
+	public boolean verificarRespuestaSeguridad(String usr, int idPregunta, String respuesta) {
+		// OJO con las mayúsculas/minúsculas de tus tablas en Aiven.
+		String sql = "SELECT respuesta_texto FROM RESPONDE_PREGUNTA WHERE nombreUsuario = ? AND id_pregunta = ?";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ps.setString(1, usr);
+			ps.setInt(2, idPregunta);
+			ResultSet rs = ps.executeQuery();
+			if (rs.next()) {
+				String respReal = rs.getString("respuesta_texto");
+				// equalsIgnoreCase para que no importe si pone "Madrid" o "madrid"
+				return respReal.equalsIgnoreCase(respuesta.trim());
+			}
+		} catch (SQLException e) {
+			System.err.println("Error verificando seguridad: " + e.getMessage());
+		}
+		return false;
+	}
+
+	// Obtiene [puntos, total_actividades_completadas]
+	public int[] obtenerEstadisticasUsuario(String usr) {
+		int[] stats = new int[] { 0, 0 };
+		String sqlPuntos = "SELECT puntos FROM USERS WHERE USR = ?";
+		String sqlActividades = "SELECT COUNT(*) FROM COMPLETAR_ACTIVIDAD WHERE nombreUsuario = ?";
+
+		try {
+			// 1. Obtener Puntos
+			PreparedStatement ps1 = conexion.prepareStatement(sqlPuntos);
+			ps1.setString(1, usr);
+			ResultSet rs1 = ps1.executeQuery();
+			if (rs1.next())
+				stats[0] = rs1.getInt(1);
+			ps1.close();
+
+			// 2. Obtener Actividades Completadas
+			PreparedStatement ps2 = conexion.prepareStatement(sqlActividades);
+			ps2.setString(1, usr);
+			ResultSet rs2 = ps2.executeQuery();
+			if (rs2.next())
+				stats[1] = rs2.getInt(1);
+			ps2.close();
+		} catch (SQLException e) {
+			System.err.println("Error sacando estadisticas: " + e.getMessage());
+		}
+		return stats;
+	}
+	
+	public boolean actualizarAjustes(String usrActual, String nuevoUsr, String nuevoCorreo, String nuevaPwd) {
+		// 1. Empezamos a construir la query básica (Nombre y Correo)
+		StringBuilder sql = new StringBuilder("UPDATE USERS SET USR = ?, correo = ?");
+		
+		// 2. Comprobamos si el usuario ha escrito una nueva contraseña
+		boolean cambiarPwd = (nuevaPwd != null && !nuevaPwd.trim().isEmpty());
+		
+		if (cambiarPwd) {
+			sql.append(", PWD = ?"); // Añadimos la columna de la contraseña
+		}
+		
+		// 3. Añadimos el final de la query
+		sql.append(" WHERE USR = ?");
+
+		try {
+			java.sql.PreparedStatement ps = conexion.prepareStatement(sql.toString());
+			ps.setString(1, nuevoUsr);
+			ps.setString(2, nuevoCorreo);
+			
+			// 4. Asignamos los parámetros dependiendo de si hay contraseña o no
+			if (cambiarPwd) {
+				ps.setString(3, nuevaPwd);
+				ps.setString(4, usrActual);
+			} else {
+				// Si no hay contraseña, el parámetro 3 pasa a ser el usrActual del WHERE
+				ps.setString(3, usrActual); 
+			}
+			
+			return ps.executeUpdate() > 0;
+			
+		} catch (java.sql.SQLException e) {
+			System.err.println("Error al actualizar perfil: " + e.getMessage());
 			return false;
 		}
 	}
@@ -363,9 +501,20 @@ public class Modelo {
 		}
 	}
 
+	/**
+	 * Registra la finalización de una actividad por parte de un usuario específico.
+	 * El método realiza una búsqueda previa del ID de la actividad basándose en su nombre
+	 * para asegurar la integridad referencial antes de insertar el registro en el historial.
+	 * 
+	 * @param usr El nombre del usuario que completa la acción.
+	 * @param nombreActividad El nombre legible de la actividad realizada.
+	 * @return true si se encontró la actividad y se registró el progreso; false en caso contrario.
+	 */
 	public boolean registrarActividadCompletada(String usr, String nombreActividad) {
 		try {
 			int idActividad = -1;
+			
+			// Obtenemos el ID numérico asociado al nombre de la actividad.
 			PreparedStatement ps1 = conexion.prepareStatement("SELECT id_actividad FROM ACTIVIDADES WHERE nombre = ?");
 			ps1.setString(1, nombreActividad);
 			ResultSet rs = ps1.executeQuery();
@@ -373,8 +522,10 @@ public class Modelo {
 			if (rs.next()) {
 				idActividad = rs.getInt("id_actividad");
 			}
-
+			
+			// Si el ID existe, registramos la relación en la tabla intermedia.
 			if (idActividad != -1) {
+				// Se asocia el usuario logueado con la actividad mediante sus llaves foráneas.
 				PreparedStatement ps2 = conexion.prepareStatement(
 						"INSERT INTO COMPLETAR_ACTIVIDAD (nombreUsuario, id_actividad) VALUES (?, ?)");
 				ps2.setString(1, usr);
@@ -437,10 +588,24 @@ public class Modelo {
 		}
 	}
 
+	/**
+	 * Gestiona la creación de un nuevo grupo de usuarios y asigna automáticamente
+	 * al creador como el primer miembro del mismo. 
+	 * Implementa una transacción SQL para asegurar que el grupo no se cree si
+	 * falla la vinculación del creador.
+	 * 
+	 * @param nombre Nombre único del grupo.
+	 * @param descripcion Breve texto descriptivo.
+	 * @param esPrivado Define si el grupo requiere contraseña para unirse.
+	 * @param contrasena Clave de acceso (será null si el grupo es público).
+	 * @param creador Nombre del usuario que funda el grupo.
+	 * @return true si el grupo y la pertenencia se registraron con éxito; false en caso de error.
+	 */
 	public boolean crearGrupo(String nombre, String descripcion, boolean esPrivado, String contrasena, String creador) {
 		try {
 			conexion.setAutoCommit(false);
 			String sqlGrupo = "INSERT INTO GRUPO (nombre, descripcion, es_privado, contrasena) VALUES (?, ?, ?, ?)";
+			// Utilizamos RETURN_GENERATED_KEYS para obtener el ID autonumérico creado por MySQL
 			PreparedStatement ps1 = conexion.prepareStatement(sqlGrupo, PreparedStatement.RETURN_GENERATED_KEYS);
 			ps1.setString(1, nombre);
 			ps1.setString(2, descripcion);
@@ -448,6 +613,7 @@ public class Modelo {
 			ps1.setString(4, esPrivado ? contrasena : null); // Si no es privado, guardamos null
 			ps1.executeUpdate();
 
+			// Recuperamos el ID generado por la base de datos para usarlo en la siguiente inserción
 			ResultSet rs = ps1.getGeneratedKeys();
 			int idGrupo = -1;
 			if (rs.next()) {
@@ -455,6 +621,7 @@ public class Modelo {
 			}
 			ps1.close();
 
+			// Si el grupo se creó, añadimos al usuario a la tabla PERTENECE_GRUPO
 			if (idGrupo != -1) {
 				String sqlPertenece = "INSERT INTO PERTENECE_GRUPO (nombreUsuario, id_grupo) VALUES (?, ?)";
 				PreparedStatement ps2 = conexion.prepareStatement(sqlPertenece);
@@ -463,6 +630,7 @@ public class Modelo {
 				ps2.executeUpdate();
 				ps2.close();
 
+				// Si ambas operaciones fueron exitosas, consolidamos los cambios en la BD
 				conexion.commit();
 				return true;
 			}
@@ -521,10 +689,42 @@ public class Modelo {
 		}
 		return "El grupo no existe.";
 	}
+	
+	public boolean existeUsuario(String usr) {
+        String query = "SELECT USR FROM USERS WHERE USR = ?";
+        try (PreparedStatement pstmt = conexion.prepareStatement(query)) {
+            pstmt.setString(1, usr);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    public int modificar(String usr, String pwd) {
+        try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE USERS SET PWD = ? WHERE USR = ?")) {
+            pstmt.setString(1, pwd);
+            pstmt.setString(2, usr);
+            return pstmt.executeUpdate();
+        } catch (SQLException e) {
+            return 0;
+        }
+    }
+
+    public int borrar(String usr, String pwd) {
+        try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM USERS WHERE usr = ? AND pwd=?")) {
+            pstmt.setString(1, usr);
+            pstmt.setString(2, pwd);
+            return pstmt.executeUpdate();
+        } catch (SQLException e) {
+            return 0;
+        }
+    }
 
 	// Permite a un usuario abandonar un grupo
 	public boolean abandonarGrupo(String usr, String nombreGrupo) {
-		// Hacemos el DELETE usando una subconsulta para encontrar el id_grupo por su nombre
+		// Hacemos el DELETE usando una subconsulta para encontrar el id_grupo por su
+		// nombre
 		String sql = "DELETE FROM PERTENECE_GRUPO WHERE nombreUsuario = ? AND id_grupo = (SELECT id_grupo FROM GRUPO WHERE nombre = ?)";
 		try (java.sql.PreparedStatement ps = conexion.prepareStatement(sql)) {
 			ps.setString(1, usr);
@@ -605,5 +805,40 @@ public class Modelo {
 
 	public String getUrlDB() {
 		return this.url;
+	}
+	
+	/**
+     * Recupera el código OTP generado automáticamente por el motor de base de datos.
+     * Este método actúa como puente entre el Trigger de MySQL y el servicio de Email en Java.
+     * 
+     * @param usuario Nombre del usuario recién registrado
+     * @return El código alfanumérico de 6 caracteres o null si no se encuentra
+     */
+	public String obtenerUltimoOTP(String usuario) {
+	    String otp = null;
+	    // Buscamos el código más reciente generado para este usuario
+	    String sql = "SELECT otp_code FROM OTP_CODES WHERE USR = ? ORDER BY expires_at DESC LIMIT 1";
+	    
+	    try (PreparedStatement pst = conexion.prepareStatement(sql)) {
+	        pst.setString(1, usuario);
+	        ResultSet rs = pst.executeQuery();
+	        if (rs.next()) {
+	            otp = rs.getString("otp_code");
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error al recuperar OTP: " + e.getMessage());
+	    }
+	    return otp;
+	}
+	
+	public Connection getConexion() {
+	    return this.conexion;
+	}
+
+	// Para saber a quién estamos verificando en la ventana OTP
+	private String ultimoUsuarioRegistrado;
+
+	public String getUltimoUsuarioRegistrado() {
+	    return this.ultimoUsuarioRegistrado;
 	}
 }

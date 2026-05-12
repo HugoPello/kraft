@@ -146,8 +146,8 @@ CREATE TABLE PERTENECE_GRUPO (
     id_grupo INT NOT NULL,
     fecha_union DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (nombreUsuario, id_grupo),
-    FOREIGN KEY (nombreUsuario) REFERENCES USERS(USR) ON DELETE CASCADE,
-    FOREIGN KEY (id_grupo) REFERENCES GRUPO(id_grupo) ON DELETE CASCADE
+    FOREIGN KEY (nombreUsuario) REFERENCES USERS(USR) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_grupo) REFERENCES GRUPO(id_grupo) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Relación "Completar" (Usuarios - Actividades)
@@ -156,10 +156,9 @@ CREATE TABLE COMPLETAR_ACTIVIDAD
     nombreUsuario     VARCHAR(100) NOT NULL,
     id_actividad      INT          NOT NULL,
     fecha_realizacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-    -- La PK es triple para permitir repetir la misma actividad en diferentes momentos
     PRIMARY KEY (nombreUsuario, id_actividad, fecha_realizacion),
-    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE,
-    FOREIGN KEY (id_actividad) REFERENCES ACTIVIDADES (id_actividad) ON DELETE CASCADE
+    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_actividad) REFERENCES ACTIVIDADES (id_actividad) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Relación "Hacer" (Usuarios - Logros)
@@ -169,8 +168,8 @@ CREATE TABLE HACER_LOGRO
     id_logro         INT          NOT NULL,
     fecha_desbloqueo DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (nombreUsuario, id_logro),
-    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE,
-    FOREIGN KEY (id_logro) REFERENCES LOGROS (id_logro) ON DELETE CASCADE
+    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_logro) REFERENCES LOGROS (id_logro) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Relación "Tiene" (Usuarios - Cosméticos / El Inventario)
@@ -178,11 +177,11 @@ CREATE TABLE TIENE_COSMETICO
 (
     nombreUsuario VARCHAR(100) NOT NULL,
     id_cosmetico  INT          NOT NULL,
-    esta_equipado BOOLEAN  DEFAULT FALSE, -- Crucial para saber qué lleva puesto
+    esta_equipado BOOLEAN  DEFAULT FALSE, 
     fecha_compra  DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (nombreUsuario, id_cosmetico),
-    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE,
-    FOREIGN KEY (id_cosmetico) REFERENCES COSMETICOS (id_cosmetico) ON DELETE CASCADE
+    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_cosmetico) REFERENCES COSMETICOS (id_cosmetico) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Relación "Se generan" (Actividades - Misiones)
@@ -190,20 +189,21 @@ CREATE TABLE MISION_ACTIVIDAD
 (
     id_mision          INT NOT NULL,
     id_actividad       INT NOT NULL,
-    cantidad_requerida INT DEFAULT 1, -- Cuántas veces hay que hacer la actividad
+    cantidad_requerida INT DEFAULT 1, 
     PRIMARY KEY (id_mision, id_actividad),
-    FOREIGN KEY (id_mision) REFERENCES MISIONES (id_mision) ON DELETE CASCADE,
-    FOREIGN KEY (id_actividad) REFERENCES ACTIVIDADES (id_actividad) ON DELETE CASCADE
+    FOREIGN KEY (id_mision) REFERENCES MISIONES (id_mision) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_actividad) REFERENCES ACTIVIDADES (id_actividad) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
 -- Relación "Responde" (Usuarios - Pregunta de Seguridad)
 CREATE TABLE RESPONDE_PREGUNTA
 (
     nombreUsuario   VARCHAR(100) NOT NULL,
     id_pregunta     INT          NOT NULL,
-    respuesta_texto VARCHAR(255) NOT NULL, -- Aquí se guarda la respuesta original
+    respuesta_texto VARCHAR(255) NOT NULL, 
     PRIMARY KEY (nombreUsuario, id_pregunta),
-    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE,
-    FOREIGN KEY (id_pregunta) REFERENCES PREGUNTA_SEGURIDAD (id_pregunta) ON DELETE CASCADE
+    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_pregunta) REFERENCES PREGUNTA_SEGURIDAD (id_pregunta) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Relación "Participa" (Usuarios - Eventos)
@@ -211,10 +211,10 @@ CREATE TABLE PARTICIPA_EVENTO
 (
     nombreUsuario   VARCHAR(100) NOT NULL,
     id_evento       INT          NOT NULL,
-    progreso_evento INT DEFAULT 0, -- Para tu JProgressBar de la Vista Eventos
+    progreso_evento INT DEFAULT 0, 
     PRIMARY KEY (nombreUsuario, id_evento),
-    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE,
-    FOREIGN KEY (id_evento) REFERENCES EVENTOS (id_evento) ON DELETE CASCADE
+    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_evento) REFERENCES EVENTOS (id_evento) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Relación "Realiza" (Usuarios - Misiones)
@@ -224,10 +224,9 @@ CREATE TABLE REALIZA_MISION
     id_mision     INT          NOT NULL,
     progreso      INT DEFAULT 0,
     PRIMARY KEY (nombreUsuario, id_mision),
-    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE,
-    FOREIGN KEY (id_mision) REFERENCES MISIONES (id_mision) ON DELETE CASCADE
+    FOREIGN KEY (nombreUsuario) REFERENCES USERS (USR) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_mision) REFERENCES MISIONES (id_mision) ON DELETE CASCADE ON UPDATE CASCADE
 );
-
 -- ========================================================
 -- 3. DATOS INICIALES (Admins)
 -- ========================================================
