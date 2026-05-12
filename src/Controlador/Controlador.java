@@ -1,16 +1,42 @@
+/**
+ * Clase controladora que actúa como intermediaria entre la Vista y el Modelo.
+ * Gestiona los eventos de usuario, la navegación entre ventanas y la invocación
+ * de servicios de mensajería externa.
+ * 
+ * @author Hugo
+ */
+
 package Controlador;
 
+import java.awt.Image;
 import java.awt.Window;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.sql.SQLException;
 import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+import com.mysql.cj.jdbc.CallableStatement;
+
 import Modelo.Modelo;
 import Vista.Vista;
 import Vista._00_Login;
 import Vista._01_Registro;
 import Vista._02_Inicio;
 import Vista._04_DentroActividad;
+import Vista._08_PerfilUsuario;
+import Vista._09_OlvidoContraseña;
 import Vista._10_CrearEventoAdmin;
 import Vista._11_PanelAdmin;
+import Vista._13_AjustesUsuario;
 import Vista._14_CrearActividad;
 import Vista._15_Configuracion;
 import Vista._16_Grupos;
@@ -55,7 +81,7 @@ public class Controlador {
 	public void irARegistro() {
 		// Intentamos conectar usando los datos actuales del .ini
 		if (miModelo.conectarBD()) {
-			//  Si la conexión es exitosa, cambiamos de ventana
+			// Si la conexión es exitosa, cambiamos de ventana
 			this.cambiarVentana(0, 1);
 		} else {
 			// Si falla, avisamos en la propia pantalla de Login
@@ -103,57 +129,95 @@ public class Controlador {
 			System.exit(0);
 		}
 	}
-
+	
+	/**
+     * Gestiona el flujo de registro: Validación de entrada, Captcha, Inserción en BD
+     * y disparo del servicio de mensajería OTP.
+     */
 	public void registrarUsuario() {
-		_01_Registro vistaReg = (_01_Registro) misVistas[1];
+	    _01_Registro vistaReg = (_01_Registro) misVistas[1];
 
-		String usr = vistaReg.getTxtNombre();
-		String pwd = vistaReg.getTxtPass();
-		String pwdRepetir = vistaReg.getPasswordFieldRepetir();
-		String fecha = vistaReg.getTxtFechaNac();
-		int idPregunta = vistaReg.getIndicePregunta();
-		String respuesta = vistaReg.getTxtRespuesta();
-		boolean esAdmin = vistaReg.isModoAdmin();
-		String adminPass = vistaReg.getPassAdmin();
+	    // 1. Extraer todos los datos de la vista
+	    String usr = vistaReg.getTxtNombre();
+	    String emailDestino = vistaReg.getTxtEmail();
+	    String pwd = vistaReg.getTxtPass();
+	    String pwdRepetir = vistaReg.getPasswordFieldRepetir();
+	    String fecha = vistaReg.getTxtFechaNac();
+	    int idPregunta = vistaReg.getIndicePregunta();
+	    String respuesta = vistaReg.getTxtRespuesta();
+	    boolean esAdmin = vistaReg.isModoAdmin();
+	    String adminPass = vistaReg.getPassAdmin();
+	    
+	    // Datos del Captcha
+	    String captchaUsuario = vistaReg.getTxtCaptcha();
+	    String captchaReal = vistaReg.getCaptchaGenerado();
 
-		if (usr.trim().isEmpty() || pwd.isEmpty() || respuesta.trim().isEmpty()) {
-			vistaReg.mostrarMensaje("Error: Nombre, Contraseña y Respuesta son obligatorios.");
-			return;
-		}
-		if (!pwd.equals(pwdRepetir)) {
-			vistaReg.mostrarMensaje("Error: Las contraseñas no coinciden.");
-			return;
-		}
-		if (!fecha.isEmpty()) {
-			try {
-				java.sql.Date.valueOf(fecha);
-			} catch (Exception e) {
-				vistaReg.mostrarMensaje("Error: El formato de la fecha debe ser YYYY-MM-DD.");
-				return;
-			}
-		}
+	    // 2. Validaciones de campos obligatorios
+	    if (usr.trim().isEmpty() || pwd.isEmpty() || respuesta.trim().isEmpty() || emailDestino.trim().isEmpty()) {
+	        vistaReg.mostrarMensaje("Error: Nombre, Email, Contraseña y Respuesta son obligatorios.");
+	        return;
+	    }
 
-		boolean rolFinal = false;
-		if (esAdmin) {
-			if (!adminPass.equals("1234")) {
-				vistaReg.mostrarMensaje("Error: Contraseña de Administrador incorrecta.");
-				return;
-			}
-			rolFinal = true;
-		}
+	    // 3. Validación de Captcha (Añadido)
+	    if (!captchaUsuario.equalsIgnoreCase(captchaReal)) {
+	        vistaReg.mostrarMensaje("Error: El código Captcha no coincide.");
+	        return;
+	    }
 
-		if (miModelo.existeUsuario(usr)) {
-			vistaReg.mostrarMensaje("Error: El nombre de usuario '" + usr + "' ya está en uso.");
-			return;
-		}
+	    // 4. Validación de coincidencia de contraseñas [Tu código original]
+	    if (!pwd.equals(pwdRepetir)) {
+	        vistaReg.mostrarMensaje("Error: Las contraseñas no coinciden.");
+	        return;
+	    }
 
-		boolean insertadoOK = miModelo.registroCompleto(usr, pwd, rolFinal, fecha, idPregunta, respuesta);
-		if (insertadoOK) {
-			vistaReg.mostrarMensaje("¡Registro exitoso! Ya puedes iniciar sesión.");
-			cambiarVentana(1, 0);
-		} else {
-			vistaReg.mostrarMensaje("Error Crítico: No se pudo guardar en la base de datos.");
-		}
+	    // 5. Validación de formato de fecha [Tu código original]
+	    if (!fecha.isEmpty()) {
+	        try {
+	            java.sql.Date.valueOf(fecha);
+	        } catch (Exception e) {
+	            vistaReg.mostrarMensaje("Error: El formato de la fecha debe ser YYYY-MM-DD.");
+	            return;
+	        }
+	    }
+
+	    // 6. Lógica de Rol y Contraseña de Administrador
+	    boolean rolFinal = false;
+	    if (esAdmin) {
+	        if (!adminPass.equals("1234")) {
+	            vistaReg.mostrarMensaje("Error: Contraseña de Administrador incorrecta.");
+	            return;
+	        }
+	        rolFinal = true;
+	    }
+
+	    // 7. Comprobación de existencia previa
+	    if (miModelo.existeUsuario(usr)) {
+	        vistaReg.mostrarMensaje("Error: El nombre de usuario '" + usr + "' ya está en uso.");
+	        return;
+	    }
+
+	    // 8. Llamada al modelo (7 parámetros: incluye el correo)
+	    boolean insertadoOK = miModelo.registroCompleto(usr, pwd, rolFinal, fecha, idPregunta, respuesta, emailDestino);
+	    
+	    if (insertadoOK) {
+	        // 9. Recuperar el OTP generado automáticamente por el Trigger en MySQL
+	        String otpGenerado = miModelo.obtenerUltimoOTP(usr);
+	        
+	        if (otpGenerado != null) {
+	            // 10. Envío del email real mediante el servicio de mensajería
+	            Servicios.Email miCorreo = new Servicios.Email();
+	            miCorreo.enviarCorreoOTP(emailDestino, otpGenerado);
+	            
+	            vistaReg.mostrarMensaje("¡Registro casi listo! Revisa el código enviado a " + emailDestino);
+	            
+	            // 11. Cambiar a la ventana de verificación (Ventana 18)
+	            cambiarVentana(1, 18); 
+	        } else {
+	            vistaReg.mostrarMensaje("Usuario creado, pero hubo un error generando el código de seguridad.");
+	        }
+	    } else {
+	        vistaReg.mostrarMensaje("Error Crítico: No se pudo guardar en la base de datos.");
+	    }
 	}
 
 	public ArrayList<Object[]> getDatosUsuarios() {
@@ -170,6 +234,137 @@ public class Controlador {
 
 	public int modificarUsuario(String usr, String pwd) {
 		return miModelo.modificar(usr, pwd);
+	}
+	
+	// =========================================================================
+	// GESTIÓN DE FICHEROS (FOTO DE PERFIL)
+	// =========================================================================
+
+	
+	/**
+     * Implementa la gestión de ficheros mediante NIO.2.
+     * Permite subir una imagen, crear el directorio local si no existe y 
+     * renombrar el archivo basándose en la sesión activa del usuario.
+     */
+	public void subirFotoPerfil() {
+		// 1. Abrir explorador de archivos de Windows
+		JFileChooser chooser = new JFileChooser();
+		FileNameExtensionFilter filter = new FileNameExtensionFilter(
+				"Imágenes (JPG, PNG)", "jpg", "jpeg", "png");
+		chooser.setFileFilter(filter);
+
+		int seleccion = chooser.showOpenDialog(null);
+
+		if (seleccion == JFileChooser.APPROVE_OPTION) {
+			File archivoOrigen = chooser.getSelectedFile();
+			String usr = miModelo.getUsuarioLogueado();
+
+			try {
+				// 2. Crear carpeta "perfiles" en el proyecto si no existe
+				File carpeta = new File("perfiles");
+				if (!carpeta.exists()) {
+					carpeta.mkdir();
+				}
+
+				// 3. Copiar la imagen y llamarla como el usuario (ej: perfiles/Ivan.jpg)
+				File archivoDestino = new File("perfiles/" + usr + ".jpg");
+				Files.copy(archivoOrigen.toPath(), archivoDestino.toPath(),
+						StandardCopyOption.REPLACE_EXISTING);
+
+				JOptionPane.showMessageDialog(null, "¡Foto de perfil actualizada con éxito!");
+
+			} catch (Exception e) {
+				System.err.println("Error al guardar fichero: " + e.getMessage());
+				JOptionPane.showMessageDialog(null, "Error al guardar la imagen.", "Error",
+						JOptionPane.ERROR_MESSAGE);
+			}
+		}
+	}
+	
+	
+
+	// =========================================================================
+	// 8. RECUPERACIÓN DE CONTRASEÑA Y PERFIL
+	// =========================================================================
+
+	public void restablecerContrasena() {
+		_09_OlvidoContraseña vista = (_09_OlvidoContraseña) misVistas[9];
+
+		String usr = vista.getUsuario();
+		int idPregunta = vista.getIndicePregunta();
+		String respuesta = vista.getRespuestaSeguridad();
+		String nuevaPass = vista.getNuevaPass();
+		String confirmPass = vista.getConfirmPass();
+
+		if (usr.isEmpty() || respuesta.isEmpty() || nuevaPass.isEmpty()) {
+			vista.mostrarMensaje("Por favor, rellena todos los campos.");
+			return;
+		}
+		if (idPregunta == 0) {
+			vista.mostrarMensaje("Por favor, selecciona una pregunta de seguridad.");
+			return;
+		}
+		if (!nuevaPass.equals(confirmPass)) {
+			vista.mostrarMensaje("Las contraseñas no coinciden.");
+			return;
+		}
+		if (!miModelo.existeUsuario(usr)) {
+			vista.mostrarMensaje("El usuario indicado no existe.");
+			return;
+		}
+
+		// Comprobamos en el Modelo si la respuesta es correcta
+		boolean esCorrecta = miModelo.verificarRespuestaSeguridad(usr, idPregunta, respuesta);
+
+		if (esCorrecta) {
+			int filasAfectadas = miModelo.modificar(usr, nuevaPass);
+			if (filasAfectadas > 0) {
+				vista.mostrarMensaje("Contraseña actualizada con éxito. Ya puedes iniciar sesión.");
+				vista.limpiarCampos();
+				cambiarVentana(9, 0); // Volver al login
+			} else {
+				vista.mostrarMensaje("Error al actualizar la contraseña en la base de datos.");
+			}
+		} else {
+			vista.mostrarMensaje("La respuesta a la pregunta de seguridad es incorrecta.");
+		}
+	}
+
+	public void alAbrirPerfil() {
+		_08_PerfilUsuario vista = (_08_PerfilUsuario) misVistas[8];
+		String usr = miModelo.getUsuarioLogueado();
+
+		// 1. Extraemos las estadísticas de la BD
+		int[] stats = miModelo.obtenerEstadisticasUsuario(usr);
+		int puntos = stats[0];
+		int totalActividades = stats[1];
+
+		// 2. Calculamos lógica de negocio (Ej: Sube de nivel cada 500 puntos)
+		int nivel = (puntos / 500) + 1;
+		int monedas = puntos; // Asumimos que 1 punto = 1 moneda para la tienda
+
+		// 3. Inyectamos los datos en el banner
+		vista.setDatosBanner(usr.toUpperCase(), nivel, monedas, totalActividades);
+
+		// 4. Inyectamos las tablas
+		Object[][] datosLogros = getTablaLogrosPerfil();
+		Object[][] datosInv = getTablaInventarioPerfil();
+		vista.setTablasPerfil(datosLogros, datosInv);
+		
+		File fotoFile = new File("perfiles/" + usr + ".jpg");
+		if (fotoFile.exists()) {
+			try {
+				// Leemos la imagen y la escalamos para que encaje perfecta en el cuadro de 120x120
+				BufferedImage imgOriginal = ImageIO.read(fotoFile);
+				Image imgEscalada = imgOriginal.getScaledInstance(120, 120, Image.SCALE_SMOOTH);
+				vista.setImagenPerfil(new ImageIcon(imgEscalada));
+			} catch (Exception e) {
+				vista.setImagenPerfil(null);
+			}
+		} else {
+			// Si el usuario no ha subido foto nunca, lo dejamos vacío
+			vista.setImagenPerfil(null);
+		}
 	}
 
 	// =========================================================================
@@ -487,7 +682,7 @@ public class Controlador {
 			vista4.mostrarMensaje("Hubo un error al registrar la actividad.");
 		}
 	}
-	
+
 	public void cargarConfiguracionAjustes() {
 		_15_Configuracion vista = (_15_Configuracion) misVistas[16];
 		vista.setDatosConfig(miModelo.getLoginDB(), miModelo.getPwdDB(), miModelo.getUrlDB());
@@ -499,4 +694,78 @@ public class Controlador {
 		vista.mostrarMensaje("Configuración guardada. La conexión se ha reiniciado.");
 		((javax.swing.JFrame) misVistas[16]).dispose();
 	}
+
+	public void guardarAjustes() {
+		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
+		
+		// 1. Recogemos los datos
+		String usrActual = miModelo.getUsuarioLogueado();
+		String nuevoUsr = vista.getNuevoNombre();
+		String nuevoCorreo = vista.getNuevoEmail();
+		String nuevaPwd = vista.getNuevaPass();
+
+		// 2. Validaciones básicas
+		if (nuevoUsr.trim().isEmpty() || nuevoCorreo.trim().isEmpty()) {
+			vista.mostrarMensaje("El nombre de usuario y el correo no pueden estar vacíos.");
+			return;
+		}
+
+		
+		if (!usrActual.equals(nuevoUsr)) {
+			File fotoVieja = new File("perfiles/" + usrActual + ".jpg");
+			if (fotoVieja.exists()) {
+				File fotoNueva = new File("perfiles/" + nuevoUsr + ".jpg");
+				
+				boolean renombrado = fotoVieja.renameTo(fotoNueva);
+				if (!renombrado) {
+					System.err.println("No se pudo renombrar la foto de perfil.");
+				}
+			}
+		}
+		boolean exito = miModelo.actualizarAjustes(usrActual, nuevoUsr, nuevoCorreo, nuevaPwd);
+		
+		if (exito) {
+		
+			miModelo.setUsuarioLogueado(nuevoUsr); 
+			
+			vista.mostrarMensaje("Perfil actualizado correctamente.");
+			vista.setDatosActuales(nuevoUsr, nuevoCorreo);
+			cambiarVentana(14, 8); // Volvemos al perfil
+		} else {
+			vista.mostrarMensaje("Error al actualizar. Es posible que el nombre de usuario ya esté en uso.");
+		}
+	}
+
+	public void alAbrirAjustes() {
+		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
+		String nombre = miModelo.getUsuarioLogueado();
+		String email = miModelo.sacarEmail();
+		vista.setDatosActuales(nombre, email);
+	}
+	
+	/**
+	 * Invoca el procedimiento almacenado en MySQL para validar el código OTP.
+	 * Gestiona la respuesta del servidor y, en caso de éxito, activa la sesión del usuario.
+	 * 
+	 * @param codigoIntroducido El token de 6 caracteres que el usuario recibió por email.
+	 */
+	public void validarCodigoOTP(String codigoIntroducido) {
+	    // Obtenemos el usuario que se acaba de registrar (puedes guardarlo en una variable global al registrar)
+	    String usr = miModelo.getUltimoUsuarioRegistrado(); 
+
+	    // Preparamos la llamada al procedimiento almacenado 'validate_otp'
+	    try (CallableStatement cst = (CallableStatement) miModelo.getConexion().prepareCall("{call validate_otp(?, ?)}")) {
+	        cst.setString(1, usr);
+	        cst.setString(2, codigoIntroducido);
+	        cst.execute(); // Ejecuta el procedimiento que cambia is_verified a 1
+
+	        JOptionPane.showMessageDialog(null, "¡Cuenta activada! Ya puedes iniciar sesión.");
+	        cambiarVentana(18, 0); // Volver al login tras el éxito
+
+	    } catch (SQLException e) {
+	        // Aquí capturamos el SIGNAL SQLSTATE '45000' que configuramos en MySQL
+	        JOptionPane.showMessageDialog(null, e.getMessage(), "Error de Verificación", JOptionPane.ERROR_MESSAGE);
+	    }
+	}
+	
 }
