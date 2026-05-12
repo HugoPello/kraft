@@ -118,6 +118,14 @@ public class _01_Registro extends JFrame implements Vista {
         txtNombre = new JTextField();
         txtNombre.addKeyListener(new KeyAdapter() {
         	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
+        	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();
         	}
@@ -142,6 +150,14 @@ public class _01_Registro extends JFrame implements Vista {
         txtPass = new JPasswordField();
         txtPass.addKeyListener(new KeyAdapter() {
         	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
+        	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();
         	}
@@ -151,6 +167,14 @@ public class _01_Registro extends JFrame implements Vista {
         txtPass.setCaretColor(Color.WHITE);
         txtPass.setBounds(200, 176, 330, 35);
         txtPass.addKeyListener(new KeyAdapter() {
+        	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
             @Override
             public void keyReleased(KeyEvent e) {
                 // Obtenemos la longitud de la contraseña actual
@@ -220,6 +244,14 @@ public class _01_Registro extends JFrame implements Vista {
         txtRespuestaSeguridad = new JTextField();
         txtRespuestaSeguridad.addKeyListener(new KeyAdapter() {
         	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
+        	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();
         	}
@@ -246,6 +278,14 @@ public class _01_Registro extends JFrame implements Vista {
         	}
         });
         txtFecha.addKeyListener(new KeyAdapter() {
+        	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
         	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();
@@ -282,6 +322,14 @@ public class _01_Registro extends JFrame implements Vista {
 
         txtCaptchaInput = new JTextField();
         txtCaptchaInput.addKeyListener(new KeyAdapter() {
+        	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
         	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();

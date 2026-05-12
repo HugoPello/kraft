@@ -116,6 +116,14 @@ public class _00_Login extends JFrame implements Vista {
 		txtUsu = new JTextField();
 		txtUsu.addKeyListener(new KeyAdapter() {
 			@Override
+			public void keyPressed(KeyEvent e) {
+				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+					if (btnInicio.isEnabled()) {
+						miControlador.login();
+					}
+				}
+			}
+			@Override
 			public void keyReleased(KeyEvent e) {
 				actualizarBoton();
 			}
@@ -131,6 +139,14 @@ public class _00_Login extends JFrame implements Vista {
 
 		txtPwd = new JPasswordField();
 		txtPwd.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+					if (btnInicio.isEnabled()) {
+						miControlador.login();
+					}
+				}
+			}
 			@Override
 			public void keyReleased(KeyEvent e) {
 				actualizarBoton();
