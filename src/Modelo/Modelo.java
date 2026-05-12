@@ -1,3 +1,11 @@
+/**
+ * Clase que gestiona la lógica de negocio y la persistencia de datos.
+ * Se comunica con la base de datos MySQL mediante JDBC y gestiona el estado
+ * de la sesión del usuario.
+ * * @author Hugo
+ * @version 1.0
+ */
+
 package Modelo;
 
 import java.io.BufferedReader;
@@ -32,6 +40,9 @@ public class Modelo {
 	private boolean ROL = false;
 	private int fallos;
 
+	// Para saber a quién estamos verificando en la ventana OTP
+	private String ultimoUsuarioRegistrado;
+
 	// =========================================================================
 	// 1. CONEXIÓN Y CONFIGURACIÓN BÁSICA
 	// =========================================================================
@@ -41,6 +52,12 @@ public class Modelo {
 	}
 
 	// LECTURA FICHERO
+	
+	/**
+	 * Carga los parámetros de conexión desde un archivo externo .ini.
+	 * Permite que la aplicación sea portable sin necesidad de recompilar el código 
+	 * ante cambios en el servidor de base de datos.
+	 */
 	public void leerConfig() {
 		try (BufferedReader br = new BufferedReader(new FileReader("config.ini"))) {
 			// Aplicamos la limpieza a cada línea leída
@@ -85,11 +102,20 @@ public class Modelo {
 		}
 	}
 
+	/**
+	 * Establece la conexión física con el servidor de base de datos MySQL.
+	 * Carga el driver JDBC dinámicamente y utiliza las credenciales obtenidas
+	 * del archivo de configuración para abrir un socket de comunicación.
+	 * * @return true si la conexión se establece o ya estaba abierta; false si hay error de red o credenciales.
+	 */
 	public boolean conectarBD() {
 		try {
 			System.out.println("Conectando a: " + url);
+			
+			// Verificación de estado: Solo intentamos conectar si la conexión es nula o se ha cerrado
 			if (conexion == null || conexion.isClosed()) {
 				Class.forName("com.mysql.cj.jdbc.Driver");
+				// Intento de autenticación mediante el DriverManager utilizando la URL y credenciales del .ini
 				conexion = DriverManager.getConnection(url, login, pwdDB);
 				System.out.println("-> Conexión establecida");
 			}
@@ -112,6 +138,10 @@ public class Modelo {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public Connection getConexion() {
+		return this.conexion;
 	}
 
 	// =========================================================================
@@ -171,6 +201,14 @@ public class Modelo {
 	// 3. MOTORES GENÉRICOS DE CONSULTA
 	// =========================================================================
 
+	/**
+	 * Motor de consulta genérico para obtener datos de una columna específica.
+	 * Utiliza Varargs para permitir un número dinámico de parámetros en el PreparedStatement.
+	 * * @param query Sentencia SQL con marcadores '?'
+	 * @param nombreColumna Etiqueta de la columna a extraer
+	 * @param parametros Valores para inyectar en los marcadores de la query
+	 * @return Array de String con los resultados o mensaje de "No hay datos"
+	 */
 	public String[] obtenerDatosColumna(String query, String nombreColumna, Object... parametros) {
 		ArrayList<String> listaDatos = new ArrayList<>();
 
@@ -239,11 +277,16 @@ public class Modelo {
 	// =========================================================================
 	// 4. AUTENTICACIÓN Y GESTIÓN DE USUARIOS
 	// =========================================================================
-
+	
+	/**
+	 * Realiza la validación de credenciales del usuario contra la base de datos.
+	 * El acceso solo se permite si el usuario existe, la contraseña coincide 
+	 * y el campo 'is_verified' es igual a 1 (activación por OTP).
+	 * * @param usr Identificador del usuario.
+	 * @param pwd Contraseña introducida.
+	 */
 	public void loginSeguro(String usr, String pwd) {
-		// Pon el nombre de la tabla EXACTAMENTE igual que lo creaste en Aiven (por ej.
-		// USERS)
-		String query = "SELECT * FROM USERS WHERE USR=? AND PWD=?";
+		String query = "SELECT * FROM USERS WHERE USR=? AND PWD=? AND is_verified=1";
 		try {
 			PreparedStatement pstmt = conexion.prepareStatement(query);
 			pstmt.setString(1, usr);
@@ -260,29 +303,40 @@ public class Modelo {
 			}
 		} catch (SQLException e) {
 			System.err.println("=== ERROR SQL EN LOGIN ===");
-			e.printStackTrace(); // Esto te dirá el fallo real (tabla no existe, etc)
-			resultado = "ErrorBD"; // Blindamos el resultado para que no sea null
+			e.printStackTrace(); 
+			resultado = "ErrorBD"; 
 		}
 	}
 
+	/**
+	 * Realiza un registro atómico del usuario utilizando transacciones SQL.
+	 * Garantiza que el usuario no se cree si falla la inserción en la tabla de seguridad.
+	 * * @param usr Nombre de identificación único
+	 * @param pwd Contraseña (texto plano por requerimiento de proyecto)
+	 * @param correo Dirección de email para el sistema 2FA
+	 * @return true si el commit se realizó con éxito; false si hubo rollback
+	 */
 	public boolean registroCompleto(String usr, String pwd, boolean rol, String fechaNac, int idPregunta,
-			String respuesta) {
+			String respuesta, String correo) {
 		try {
-			conexion.setAutoCommit(false);
+			conexion.setAutoCommit(false); // Iniciamos transacción
 
-			String query1 = "INSERT INTO USERS (USR, PWD, ROL, fechaNacimiento) VALUES (?, ?, ?, ?)";
+			// 1. Insertamos en USERS incluyendo el correo y el estado de verificación inicial
+			String query1 = "INSERT INTO USERS (USR, PWD, ROL, correo, fechaNacimiento, is_verified) VALUES (?, ?, ?, ?, ?, 0)";
 			PreparedStatement ps1 = conexion.prepareStatement(query1);
 			ps1.setString(1, usr);
 			ps1.setString(2, pwd);
 			ps1.setBoolean(3, rol);
+			ps1.setString(4, correo); // El correo del usuario para el 2FA
 
 			if (fechaNac == null || fechaNac.trim().isEmpty()) {
-				ps1.setNull(4, java.sql.Types.DATE);
+				ps1.setNull(5, java.sql.Types.DATE);
 			} else {
-				ps1.setDate(4, java.sql.Date.valueOf(fechaNac));
+				ps1.setDate(5, java.sql.Date.valueOf(fechaNac));
 			}
 			ps1.executeUpdate();
 
+			// 2. Insertamos la pregunta de seguridad en tu segunda tabla
 			String query2 = "INSERT INTO RESPONDE_PREGUNTA (nombreUsuario, id_pregunta, respuesta_texto) VALUES (?, ?, ?)";
 			PreparedStatement ps2 = conexion.prepareStatement(query2);
 			ps2.setString(1, usr);
@@ -290,52 +344,20 @@ public class Modelo {
 			ps2.setString(3, respuesta);
 			ps2.executeUpdate();
 
-			conexion.commit();
+			conexion.commit(); // Si todo va bien, guardamos cambios
+			this.ultimoUsuarioRegistrado = usr;
 			return true;
 
 		} catch (Exception e) {
 			try {
-				conexion.rollback();
-			} catch (Exception ex) {
-			}
+				conexion.rollback(); // Si algo falla, deshacemos todo
+			} catch (Exception ex) {}
+			System.err.println("Error en registro: " + e.getMessage());
 			return false;
-
 		} finally {
 			try {
 				conexion.setAutoCommit(true);
-			} catch (Exception ex) {
-			}
-		}
-	}
-
-	public boolean existeUsuario(String usr) {
-		String query = "SELECT USR FROM USERS WHERE USR = ?";
-		try (PreparedStatement pstmt = conexion.prepareStatement(query)) {
-			pstmt.setString(1, usr);
-			ResultSet rs = pstmt.executeQuery();
-			return rs.next();
-		} catch (SQLException e) {
-			return false;
-		}
-	}
-
-	public int modificar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE USERS SET PWD = ? WHERE USR = ?")) {
-			pstmt.setString(1, pwd);
-			pstmt.setString(2, usr);
-			return pstmt.executeUpdate();
-		} catch (SQLException e) {
-			return 0;
-		}
-	}
-
-	public int borrar(String usr, String pwd) {
-		try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM USERS WHERE usr = ? AND pwd=?")) {
-			pstmt.setString(1, usr);
-			pstmt.setString(2, pwd);
-			return pstmt.executeUpdate();
-		} catch (SQLException e) {
-			return 0;
+			} catch (Exception ex) {}
 		}
 	}
 
@@ -352,6 +374,13 @@ public class Modelo {
 		return listaUsuarios;
 	}
 
+	/**
+	 * Inserta un nuevo usuario en el sistema con permisos de usuario estándar (ROL = false).
+	 * Este método es utilizado por el panel de administración para el alta manual de cuentas.
+	 * * @param usr Nombre de usuario único para el nuevo registro.
+	 * @param pwd Contraseña asociada a la cuenta.
+	 * @return true si el usuario se insertó correctamente; false si hubo un error.
+	 */
 	public boolean insertarUsuarioAdmin(String usr, String pwd) {
 		String query = "INSERT INTO USERS (USR, PWD, ROL) VALUES (?, ?, ?)";
 		try (PreparedStatement ps = conexion.prepareStatement(query)) {
@@ -366,9 +395,7 @@ public class Modelo {
 
 	// --- MÉTODOS PARA RECUPERACIÓN DE CONTRASEÑA Y PERFIL ---
 
-	// Verifica si la respuesta secreta coincide con la de la BD
 	public boolean verificarRespuestaSeguridad(String usr, int idPregunta, String respuesta) {
-		// OJO con las mayúsculas/minúsculas de tus tablas en Aiven.
 		String sql = "SELECT respuesta_texto FROM RESPONDE_PREGUNTA WHERE nombreUsuario = ? AND id_pregunta = ?";
 		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
 			ps.setString(1, usr);
@@ -376,7 +403,6 @@ public class Modelo {
 			ResultSet rs = ps.executeQuery();
 			if (rs.next()) {
 				String respReal = rs.getString("respuesta_texto");
-				// equalsIgnoreCase para que no importe si pone "Madrid" o "madrid"
 				return respReal.equalsIgnoreCase(respuesta.trim());
 			}
 		} catch (SQLException e) {
@@ -385,14 +411,12 @@ public class Modelo {
 		return false;
 	}
 
-	// Obtiene [puntos, total_actividades_completadas]
 	public int[] obtenerEstadisticasUsuario(String usr) {
 		int[] stats = new int[] { 0, 0 };
 		String sqlPuntos = "SELECT puntos FROM USERS WHERE USR = ?";
 		String sqlActividades = "SELECT COUNT(*) FROM COMPLETAR_ACTIVIDAD WHERE nombreUsuario = ?";
 
 		try {
-			// 1. Obtener Puntos
 			PreparedStatement ps1 = conexion.prepareStatement(sqlPuntos);
 			ps1.setString(1, usr);
 			ResultSet rs1 = ps1.executeQuery();
@@ -400,7 +424,6 @@ public class Modelo {
 				stats[0] = rs1.getInt(1);
 			ps1.close();
 
-			// 2. Obtener Actividades Completadas
 			PreparedStatement ps2 = conexion.prepareStatement(sqlActividades);
 			ps2.setString(1, usr);
 			ResultSet rs2 = ps2.executeQuery();
@@ -414,17 +437,13 @@ public class Modelo {
 	}
 
 	public boolean actualizarAjustes(String usrActual, String nuevoUsr, String nuevoCorreo, String nuevaPwd) {
-		// 1. Empezamos a construir la query básica (Nombre y Correo)
 		StringBuilder sql = new StringBuilder("UPDATE USERS SET USR = ?, correo = ?");
-
-		// 2. Comprobamos si el usuario ha escrito una nueva contraseña
 		boolean cambiarPwd = (nuevaPwd != null && !nuevaPwd.trim().isEmpty());
 
 		if (cambiarPwd) {
-			sql.append(", PWD = ?"); // Añadimos la columna de la contraseña
+			sql.append(", PWD = ?"); 
 		}
 
-		// 3. Añadimos el final de la query
 		sql.append(" WHERE USR = ?");
 
 		try {
@@ -432,12 +451,10 @@ public class Modelo {
 			ps.setString(1, nuevoUsr);
 			ps.setString(2, nuevoCorreo);
 
-			// 4. Asignamos los parámetros dependiendo de si hay contraseña o no
 			if (cambiarPwd) {
 				ps.setString(3, nuevaPwd);
 				ps.setString(4, usrActual);
 			} else {
-				// Si no hay contraseña, el parámetro 3 pasa a ser el usrActual del WHERE
 				ps.setString(3, usrActual);
 			}
 
@@ -483,10 +500,8 @@ public class Modelo {
 	public boolean crearActividad(String nombre, String tipo, String dificultad, int puntos, String frecuencia,
 			String unidad, double meta) {
 		try {
-			// 0. Iniciamos la transacción (El combo 3x1)
 			conexion.setAutoCommit(false);
 
-			// 1. CREAMOS LA ACTIVIDAD y sacamos su ID generado
 			String sqlActividad = "INSERT INTO ACTIVIDADES (nombre, tipo, dificultad, puntos, frecuencia, unidad_medida, meta_cantidad) VALUES (?, ?, ?, ?, ?, ?, ?)";
 			PreparedStatement ps1 = conexion.prepareStatement(sqlActividad, java.sql.Statement.RETURN_GENERATED_KEYS);
 			ps1.setString(1, nombre);
@@ -504,10 +519,8 @@ public class Modelo {
 				idActividad = rsActividad.getInt(1);
 			ps1.close();
 
-			// 2. CREAMOS LA MISIÓN AUTOMÁTICA y sacamos su ID generado
-			// El texto se autogenera: "Completar 5.0 Km de Running"
 			String descMision = "Hacer " + meta + " " + unidad + " de " + nombre;
-			int recompensaMision = puntos * 2; // La misión da el doble de puntos que la actividad suelta
+			int recompensaMision = puntos * 2; 
 			String tipoMision = (frecuencia.equalsIgnoreCase("Semanal")) ? "Semanal" : "Diaria";
 
 			String sqlMision = "INSERT INTO MISIONES (descripcion, recompensa, tipo) VALUES (?, ?, ?)";
@@ -523,7 +536,6 @@ public class Modelo {
 				idMision = rsMision.getInt(1);
 			ps2.close();
 
-			// 3. CREAMOS EL PUENTE (El enlace automático)
 			if (idActividad != -1 && idMision != -1) {
 				String sqlPuente = "INSERT INTO MISION_ACTIVIDAD (id_mision, id_actividad, cantidad_requerida) VALUES (?, ?, ?)";
 				PreparedStatement ps3 = conexion.prepareStatement(sqlPuente);
@@ -534,29 +546,38 @@ public class Modelo {
 				ps3.close();
 			}
 
-			// Si todo ha ido bien, confirmamos los 3 INSERTS
 			conexion.commit();
 			return true;
 
 		} catch (SQLException e) {
 			System.err.println("Error en el Combo 3x1 de Crear Actividad: " + e.getMessage());
 			try {
-				// Si algo explota, deshacemos todo para no romper la base de datos
 				conexion.rollback();
 			} catch (SQLException ex) {
 			}
 			return false;
 		} finally {
 			try {
-				conexion.setAutoCommit(true); // Devolvemos la conexión a su estado normal
+				conexion.setAutoCommit(true); 
 			} catch (SQLException ex) {
 			}
 		}
 	}
 
+	/**
+	 * Registra la finalización de una actividad por parte de un usuario específico.
+	 * El método realiza una búsqueda previa del ID de la actividad basándose en su nombre
+	 * para asegurar la integridad referencial antes de insertar el registro en el historial.
+	 * * @param usr El nombre del usuario que completa la acción.
+	 * @param nombreActividad El nombre legible de la actividad realizada.
+	 * @param cantidad La cantidad registrada por el usuario para sumar al progreso.
+	 * @return true si se encontró la actividad y se registró el progreso; false en caso contrario.
+	 */
 	public boolean registrarActividadCompletada(String usr, String nombreActividad, double cantidad) {
 		try {
 			int idActividad = -1;
+			
+			// Obtenemos el ID numérico asociado al nombre de la actividad.
 			PreparedStatement ps1 = conexion.prepareStatement("SELECT id_actividad FROM ACTIVIDADES WHERE nombre = ?");
 			ps1.setString(1, nombreActividad);
 			ResultSet rs = ps1.executeQuery();
@@ -564,7 +585,9 @@ public class Modelo {
 				idActividad = rs.getInt("id_actividad");
 			ps1.close();
 
+			// Si el ID existe, registramos la relación en la tabla intermedia.
 			if (idActividad != -1) {
+				// Se asocia el usuario logueado con la actividad mediante sus llaves foráneas.
 				PreparedStatement ps2 = conexion.prepareStatement(
 						"INSERT INTO COMPLETAR_ACTIVIDAD (nombreUsuario, id_actividad, cantidad) VALUES (?, ?, ?)");
 				ps2.setString(1, usr);
@@ -601,13 +624,10 @@ public class Modelo {
 			psComprobar.setString(1, usr);
 			ResultSet rsMisionesHechas = psComprobar.executeQuery();
 
-			// 2. Por cada misión completada, sumamos los puntos al usuario y la marcamos
-			// como TRUE
 			while (rsMisionesHechas.next()) {
 				int idMis = rsMisionesHechas.getInt("id_mision");
 				int xpGanada = rsMisionesHechas.getInt("recompensa");
 
-				// Dar puntos y monedas al usuario
 				PreparedStatement psPremio = conexion.prepareStatement(
 						"UPDATE USERS SET puntos = puntos + ?, monedas_tienda = monedas_tienda + ? WHERE USR = ?");
 				psPremio.setInt(1, xpGanada);
@@ -615,7 +635,6 @@ public class Modelo {
 				psPremio.setString(3, usr);
 				psPremio.executeUpdate();
 
-				// Sellar la misión como completada
 				PreparedStatement psSellar = conexion.prepareStatement(
 						"UPDATE REALIZA_MISION SET completada = TRUE WHERE nombreUsuario = ? AND id_mision = ? AND fecha_asignacion = CURRENT_DATE");
 				psSellar.setString(1, usr);
@@ -626,7 +645,6 @@ public class Modelo {
 			}
 
 		} catch (SQLException e) {
-			// ¡MUY IMPORTANTE IMPRIMIR EL ERROR!
 			System.err.println("Error al sumar progreso en misiones: " + e.getMessage());
 		}
 	}
@@ -645,14 +663,12 @@ public class Modelo {
 
 	public void generarMisionesDiarias(String usr) {
 		try {
-			// Insertar 3 Diarias
 			String sqlDiarias = "INSERT INTO REALIZA_MISION (nombreUsuario, id_mision, fecha_asignacion) "
 					+ "SELECT ?, id_mision, CURRENT_DATE FROM MISIONES WHERE tipo = 'Diaria' ORDER BY RAND() LIMIT 3";
 			PreparedStatement ps1 = conexion.prepareStatement(sqlDiarias);
 			ps1.setString(1, usr);
 			ps1.executeUpdate();
 
-			// Insertar 1 Semanal
 			String sqlSemanales = "INSERT INTO REALIZA_MISION (nombreUsuario, id_mision, fecha_asignacion) "
 					+ "SELECT ?, id_mision, CURRENT_DATE FROM MISIONES WHERE tipo = 'Semanal' ORDER BY RAND() LIMIT 1";
 			PreparedStatement ps2 = conexion.prepareStatement(sqlSemanales);
@@ -740,7 +756,7 @@ public class Modelo {
 			ps1.setString(1, nombre);
 			ps1.setString(2, descripcion);
 			ps1.setBoolean(3, esPrivado);
-			ps1.setString(4, esPrivado ? contrasena : null); // Si no es privado, guardamos null
+			ps1.setString(4, esPrivado ? contrasena : null);
 			ps1.executeUpdate();
 
 			ResultSet rs = ps1.getGeneratedKeys();
@@ -775,16 +791,13 @@ public class Modelo {
 		return false;
 	}
 
-	// Devuelve los grupos a los que el usuario AÚN NO pertenece
 	public String[] obtenerGruposDisponibles(String usr) {
 		String sql = "SELECT nombre FROM GRUPO WHERE id_grupo NOT IN (SELECT id_grupo FROM PERTENECE_GRUPO WHERE nombreUsuario = ?)";
 		return obtenerDatosColumna(sql, "nombre", usr);
 	}
 
-	// Intenta unir a un usuario validando la contraseña si es privado
 	public String unirseGrupo(String usr, String nombreGrupo, String passIntentada) {
 		try {
-			// 1. Buscamos los datos del grupo
 			String sqlGrupo = "SELECT id_grupo, es_privado, contrasena FROM GRUPO WHERE nombre = ?";
 			PreparedStatement ps = conexion.prepareStatement(sqlGrupo);
 			ps.setString(1, nombreGrupo);
@@ -796,12 +809,10 @@ public class Modelo {
 				String passReal = rs.getString("contrasena");
 				ps.close();
 
-				// 2. Comprobamos contraseña
 				if (privado && (passReal != null && !passReal.equals(passIntentada))) {
 					return "Contraseña incorrecta.";
 				}
 
-				// 3. Le unimos al grupo
 				String sqlUnir = "INSERT INTO PERTENECE_GRUPO (nombreUsuario, id_grupo) VALUES (?, ?)";
 				PreparedStatement psUnir = conexion.prepareStatement(sqlUnir);
 				psUnir.setString(1, usr);
@@ -816,11 +827,39 @@ public class Modelo {
 		}
 		return "El grupo no existe.";
 	}
+	
+	public boolean existeUsuario(String usr) {
+		String query = "SELECT USR FROM USERS WHERE USR = ?";
+		try (PreparedStatement pstmt = conexion.prepareStatement(query)) {
+			pstmt.setString(1, usr);
+			ResultSet rs = pstmt.executeQuery();
+			return rs.next();
+		} catch (SQLException e) {
+			return false;
+		}
+	}
 
-	// Permite a un usuario abandonar un grupo
+	public int modificar(String usr, String pwd) {
+		try (PreparedStatement pstmt = conexion.prepareStatement("UPDATE USERS SET PWD = ? WHERE USR = ?")) {
+			pstmt.setString(1, pwd);
+			pstmt.setString(2, usr);
+			return pstmt.executeUpdate();
+		} catch (SQLException e) {
+			return 0;
+		}
+	}
+
+	public int borrar(String usr, String pwd) {
+		try (PreparedStatement pstmt = conexion.prepareStatement("DELETE FROM USERS WHERE usr = ? AND pwd=?")) {
+			pstmt.setString(1, usr);
+			pstmt.setString(2, pwd);
+			return pstmt.executeUpdate();
+		} catch (SQLException e) {
+			return 0;
+		}
+	}
+
 	public boolean abandonarGrupo(String usr, String nombreGrupo) {
-		// Hacemos el DELETE usando una subconsulta para encontrar el id_grupo por su
-		// nombre
 		String sql = "DELETE FROM PERTENECE_GRUPO WHERE nombreUsuario = ? AND id_grupo = (SELECT id_grupo FROM GRUPO WHERE nombre = ?)";
 		try (java.sql.PreparedStatement ps = conexion.prepareStatement(sql)) {
 			ps.setString(1, usr);
@@ -831,6 +870,7 @@ public class Modelo {
 			return false;
 		}
 	}
+
 	// =========================================================================
 	// 6. GESTIÓN DE NOTICIAS
 	// =========================================================================
@@ -901,5 +941,31 @@ public class Modelo {
 
 	public String getUrlDB() {
 		return this.url;
+	}
+	
+	/**
+	 * Recupera el código OTP generado automáticamente por el motor de base de datos.
+	 * Este método actúa como puente entre el Trigger de MySQL y el servicio de Email en Java.
+	 * * @param usuario Nombre del usuario recién registrado
+	 * @return El código alfanumérico de 6 caracteres o null si no se encuentra
+	 */
+	public String obtenerUltimoOTP(String usuario) {
+		String otp = null;
+		String sql = "SELECT otp_code FROM OTP_CODES WHERE USR = ? ORDER BY expires_at DESC LIMIT 1";
+		
+		try (PreparedStatement pst = conexion.prepareStatement(sql)) {
+			pst.setString(1, usuario);
+			ResultSet rs = pst.executeQuery();
+			if (rs.next()) {
+				otp = rs.getString("otp_code");
+			}
+		} catch (SQLException e) {
+			System.err.println("Error al recuperar OTP: " + e.getMessage());
+		}
+		return otp;
+	}
+
+	public String getUltimoUsuarioRegistrado() {
+		return this.ultimoUsuarioRegistrado;
 	}
 }
