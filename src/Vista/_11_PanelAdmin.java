@@ -66,6 +66,9 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 	private DefaultTableModel modelo;
 	private JTable tableNoticias;
 	private JTextField txtTitNoticia;
+	private JComboBox cbxDarLogro;
+	private JButton btnDarLogro;
+	private JButton btnQtrLogro;
 
 	public _11_PanelAdmin() {
 		// --- 1. CONFIGURACIÓN BÁSICA DE LA VENTANA ---
@@ -183,6 +186,23 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 			public boolean isCellEditable(int row, int column) {
 				return false; // Devuelve false para que ninguna celda sea editable
 			}
+		});
+		tablaUsuarios.addMouseListener(new MouseAdapter() {
+		    @Override
+		    public void mousePressed(MouseEvent e) {
+		        int fila = tablaUsuarios.getSelectedRow();
+		        if (fila != -1) {
+		            String seleccionado = tablaUsuarios.getValueAt(fila, 0).toString();
+		            
+		            txtUsrPts.setText(seleccionado);
+		            txtUsrLogros.setText(seleccionado);
+		            
+		            actualizarVistaPuntos(seleccionado);
+		            
+		            // ESTA ES LA CLAVE:
+		            filtrarLogrosDisponibles(seleccionado);
+		        }
+		    }
 		});
 		tablaUsuarios.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		scrollPane.setViewportView(tablaUsuarios);
@@ -396,6 +416,7 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 		lblAgrPts.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		lblAgrPts.setBounds(93, 117, 113, 29);
 		panelPts.add(lblAgrPts);
+		
 
 		JSpinner spnPtsAñadir = new JSpinner();
 		spnPtsAñadir.setBounds(94, 156, 124, 20);
@@ -406,6 +427,19 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 		btnAgrPts.setForeground(NARANJA);
 		btnAgrPts.setBounds(285, 229, 113, 36);
 		panelPts.add(btnAgrPts);
+		btnAgrPts.addActionListener(e -> {
+		    String usr = txtUsrPts.getText().trim();
+		    int pts = (int) spnPtsAñadir.getValue();
+		    
+		    if(!usr.isEmpty() && pts > 0) {
+		        if(miControlador.gestionarPuntos(usr, pts)) {
+		            JOptionPane.showMessageDialog(null, "¡" + pts + " puntos añadidos a " + usr + "!");
+		            llenarTabla(); // Refrescamos las tablas
+		        } else {
+		            JOptionPane.showMessageDialog(null, "Error: Usuario no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
+		        }
+		    }
+		});
 
 		JLabel lblPtsUsr = new JLabel("Puntos del Usuario");
 		lblPtsUsr.setForeground(NARANJA);
@@ -426,6 +460,18 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 		btnQtrPts_1.setBackground(new Color(25, 25, 25));
 		btnQtrPts_1.setBounds(105, 229, 113, 36);
 		panelPts.add(btnQtrPts_1);
+		btnQtrPts_1.addActionListener(e -> {
+		    String usr = txtUsrPts.getText().trim();
+		    int pts = (int) spnPtsAñadir.getValue();
+		    
+		    if(!usr.isEmpty() && pts > 0) {
+		        // Pasamos los puntos en negativo para restar
+		        if(miControlador.gestionarPuntos(usr, -pts)) {
+		            JOptionPane.showMessageDialog(null, "Se han detraído " + pts + " puntos a " + usr);
+		            llenarTabla();
+		        }
+		    }
+		});
 
 		JPanel panelLogro = new JPanel();
 		panelLogro.setBackground(GRIS_RECTANGULO);
@@ -449,22 +495,63 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 		lblLogro.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		panelLogro.add(lblLogro);
 
-		JComboBox cbxDarLogro = new JComboBox();
-		cbxDarLogro.setModel(new DefaultComboBoxModel(new String[] { "Correcaminos", "Apisonadora", "Cruzar país?" }));
-		cbxDarLogro.setBounds(318, 111, 124, 20);
+		cbxDarLogro = new JComboBox();
+		cbxDarLogro.setModel(new DefaultComboBoxModel(new String[] {}));
+		cbxDarLogro.setBounds(318, 111, 189, 20);
 		panelLogro.add(cbxDarLogro);
 
-		JButton btnDarLogro = new JButton("Dar Logro");
+		btnDarLogro = new JButton("Dar Logro");
 		btnDarLogro.setBackground(GRIS_FONDO);
 		btnDarLogro.setForeground(NARANJA);
 		btnDarLogro.setBounds(329, 229, 113, 36);
 		panelLogro.add(btnDarLogro);
+		btnDarLogro.addActionListener(e -> {
+		    String usr = txtUsrLogros.getText().trim();
+		    String logro = cbxDarLogro.getSelectedItem().toString();
+		    
+		    if(!usr.isEmpty()) {
+		        boolean ok = miControlador.darLogro(usr, logro);
+		        if(ok) {
+		            JOptionPane.showMessageDialog(null, "Logro '" + logro + "' asignado a " + usr);
+		        } else {
+		            JOptionPane.showMessageDialog(null, "El usuario ya tiene este logro o no existe.", "Aviso", JOptionPane.WARNING_MESSAGE);
+		        }
+		    }
+		});
 		
-		JButton btnQtrLogro = new JButton("Quitar Logro");
+		btnQtrLogro = new JButton("Quitar Logro");
 		btnQtrLogro.setForeground(new Color(255, 128, 0));
 		btnQtrLogro.setBackground(new Color(25, 25, 25));
 		btnQtrLogro.setBounds(105, 229, 113, 36);
 		panelLogro.add(btnQtrLogro);
+		btnQtrLogro.addActionListener(e -> {
+		    String usr = txtUsrLogros.getText().trim();
+		    if (usr.isEmpty()) return;
+
+		    // 1. Recuperamos los logros que SÍ tiene el usuario
+		    ArrayList<String> poseidos = miControlador.getLogrosUsuario(usr);
+
+		    if (poseidos.isEmpty()) {
+		        JOptionPane.showMessageDialog(null, "Este usuario no tiene logros para quitar.");
+		        return;
+		    }
+
+		    // 2. Mostramos un selector rápido (Input para elegir cuál quitar)
+		    String[] opciones = poseidos.toArray(new String[0]);
+		    String seleccionado = (String) JOptionPane.showInputDialog(null, 
+		            "Selecciona el logro a eliminar para " + usr,
+		            "Quitar Logro", 
+		            JOptionPane.QUESTION_MESSAGE, null, opciones, opciones[0]);
+
+		    // 3. Si elige uno, lo borramos
+		    if (seleccionado != null) {
+		        if (miControlador.quitarLogro(usr, seleccionado)) {
+		            JOptionPane.showMessageDialog(null, "Logro eliminado correctamente.");
+		            // 4. IMPORTANTE: Refrescamos el ComboBox de "Dar" porque ahora este logro vuelve a estar disponible
+		            filtrarLogrosDisponibles(usr);
+		        }
+		    }
+		});
 		
 		JPanel panelNoticias = new JPanel();
 		tabbedPane.addTab("Noticias", null, panelNoticias, null);
@@ -693,7 +780,53 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 		updateAlta();
 		updateBaja();
 		updateModificar();
-
+	}
+	
+	private void actualizarVistaPuntos(String usuario) {
+	    if (miControlador != null) {
+	        int puntosActuales = miControlador.getPuntosUsuario(usuario);
+	        textField_1.setText(String.valueOf(puntosActuales));
+	    }
+	}
+	
+	private void actualizarVistaLogros(String usuario) {
+	    ArrayList<String> logros = miControlador.getLogrosUsuario(usuario);
+	    
+	    if (logros.isEmpty()) {
+	        System.out.println("El usuario " + usuario + " no tiene logros aún.");
+	    } else {
+	        // Ejemplo: Podrías imprimirlo en un JLabel de estado o simplemente tenerlo listo
+	        // para que el botón "Dar Logro" sepa si ya existe.
+	        String lista = String.join(", ", logros);
+	        System.out.println("Logros de " + usuario + ": " + lista);
+	    }
+	}
+	
+	private void filtrarLogrosDisponibles(String usuario) {
+	    // 1. Obtenemos todos los logros del sistema
+	    ArrayList<String> todos = miControlador.getTodosLosLogros(); // Tienes que crear este puente en el controlador
+	    
+	    // 2. Obtenemos los que ya tiene el usuario seleccionado
+	    ArrayList<String> poseidos = miControlador.getLogrosUsuario(usuario);
+	    
+	    // 3. Creamos un nuevo modelo para el ComboBox
+	    DefaultComboBoxModel<String> nuevoModelo = new DefaultComboBoxModel<>();
+	    
+	    for (String logro : todos) {
+	        if (!poseidos.contains(logro)) {
+	            nuevoModelo.addElement(logro);
+	        }
+	    }
+	    
+	    // 4. Si no le quedan logros por ganar, avisamos
+	    if (nuevoModelo.getSize() == 0) {
+	        nuevoModelo.addElement("Todos los logros obtenidos");
+	        btnDarLogro.setEnabled(false);
+	    } else {
+	        btnDarLogro.setEnabled(true);
+	    }
+	    
+	    cbxDarLogro.setModel(nuevoModelo);
 	}
 
 	@Override

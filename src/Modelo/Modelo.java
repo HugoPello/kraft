@@ -237,6 +237,41 @@ public class Modelo {
 
 		return listaDatos.toArray(new String[0]);
 	}
+	
+	/**
+	 * Obtiene la lista de nombres de logros desbloqueados por un usuario.
+d	 * @return ArrayList con los nombres de los logros.
+	 */
+	public ArrayList<String> obtenerLogrosUsuario(String usuario) {
+	    ArrayList<String> logros = new ArrayList<>();
+	    String sql = "SELECT L.nombre FROM LOGROS L " +
+	                 "JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro " +
+	                 "WHERE HL.nombreUsuario = ?";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setString(1, usuario);
+	        ResultSet rs = ps.executeQuery();
+	        while (rs.next()) {
+	            logros.add(rs.getString("nombre"));
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error al obtener logros: " + e.getMessage());
+	    }
+	    return logros;
+	}
+	
+	public ArrayList<String> obtenerTodosLosLogros() {
+	    ArrayList<String> lista = new ArrayList<>();
+	    String sql = "SELECT nombre FROM LOGROS";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ResultSet rs = ps.executeQuery();
+	        while (rs.next()) {
+	            lista.add(rs.getString("nombre"));
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error al cargar logros globales: " + e.getMessage());
+	    }
+	    return lista;
+	}
 
 	public Object[][] obtenerDatosTabla(String query, int numColumnas, Object... parametros) {
 		ArrayList<Object[]> listaDatos = new ArrayList<>();
@@ -315,6 +350,11 @@ public class Modelo {
 	            return "LOGIN_DIRECTO";
 	            
 	        } else {
+	            // LOGIN INCORRECTO
+	            this.fallos++; 
+	            if (this.fallos >= 3) {
+	                return "CERRAR";
+	            }
 	            return "INCORRECTO";
 	        }
 	    } catch (SQLException e) {
@@ -865,5 +905,65 @@ public class Modelo {
 	 */
 	public void setUltimoUsuarioRegistrado(String usr) {
 	    this.ultimoUsuarioRegistrado = usr;
+	}
+	
+	public boolean actualizarPuntos(String usuario, int puntos) {
+	    // Usamos SUM para que acepte valores negativos (restar) y positivos (sumar)
+	    String sql = "UPDATE USERS SET puntos = puntos + ? WHERE USR = ?";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setInt(1, puntos);
+	        ps.setString(2, usuario);
+	        return ps.executeUpdate() > 0;
+	    } catch (SQLException e) {
+	        return false;
+	    }
+	}
+
+	public boolean asignarLogroAUsuario(String usuario, String nombreLogro) {
+	    // 1. Buscamos el ID del logro por su nombre
+	    String sqlId = "SELECT id_logro FROM LOGROS WHERE nombre = ?";
+	    try {
+	        PreparedStatement ps1 = conexion.prepareStatement(sqlId);
+	        ps1.setString(1, nombreLogro);
+	        ResultSet rs = ps1.executeQuery();
+	        
+	        if (rs.next()) {
+	            int id = rs.getInt("id_logro");
+	            // 2. Insertamos la relación (HACER_LOGRO es tu tabla intermedia)
+	            String sqlIns = "INSERT INTO HACER_LOGRO (nombreUsuario, id_logro, fecha_desbloqueo) VALUES (?, ?, CURRENT_DATE)";
+	            PreparedStatement ps2 = conexion.prepareStatement(sqlIns);
+	            ps2.setString(1, usuario);
+	            ps2.setInt(2, id);
+	            return ps2.executeUpdate() > 0;
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error al dar logro: " + e.getMessage());
+	    }
+	    return false;
+	}
+	
+	public int consultarPuntosUsuario(String usuario) {
+	    String sql = "SELECT puntos FROM USERS WHERE USR = ?";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setString(1, usuario);
+	        ResultSet rs = ps.executeQuery();
+	        if (rs.next()) return rs.getInt("puntos");
+	    } catch (SQLException e) {
+	        System.err.println("Error al consultar puntos: " + e.getMessage());
+	    }
+	    return 0;
+	}
+	
+	public boolean eliminarLogroUsuario(String usuario, String nombreLogro) {
+	    String sql = "DELETE HL FROM HACER_LOGRO HL " +
+	                 "JOIN LOGROS L ON HL.id_logro = L.id_logro " +
+	                 "WHERE HL.nombreUsuario = ? AND L.nombre = ?";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setString(1, usuario);
+	        ps.setString(2, nombreLogro);
+	        return ps.executeUpdate() > 0;
+	    } catch (SQLException e) {
+	        return false;
+	    }
 	}
 }

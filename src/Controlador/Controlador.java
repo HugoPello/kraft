@@ -126,6 +126,15 @@ public class Controlador {
 	        case "INCORRECTO":
 	            vista.mostrarError("Usuario o contraseña incorrectos");
 	            break;
+	           
+	        case "CERRAR":
+	            // Mensaje de despedida por seguridad y cierre total
+	            javax.swing.JOptionPane.showMessageDialog(null, 
+	                "Demasiados intentos fallidos. El sistema se cerrará.", 
+	                "Bloqueo de Seguridad", 
+	                javax.swing.JOptionPane.ERROR_MESSAGE);
+	            System.exit(0); // Cierre físico del programa
+	            break;
 
 	        default:
 	            vista.mostrarError("Error crítico en el sistema.");
@@ -772,6 +781,34 @@ public class Controlador {
 	    } catch (SQLException e) {
 	        JOptionPane.showMessageDialog(null, "Código inválido o expirado.", "Error 2FA", JOptionPane.ERROR_MESSAGE);
 	    }
+	}
+	
+	public boolean gestionarPuntos(String usuario, int cantidad) {
+	    return miModelo.actualizarPuntos(usuario, cantidad);
+	}
+
+	public boolean darLogro(String usuario, String logro) {
+	    return miModelo.asignarLogroAUsuario(usuario, logro);
+	}
+	
+	public int getPuntosUsuario(String usuario) {
+	    return miModelo.consultarPuntosUsuario(usuario);
+	}
+	
+	public ArrayList<String> getLogrosUsuario(String usuario) {
+	    return miModelo.obtenerLogrosUsuario(usuario);
+	}
+	
+	/**
+	 * Solicita al modelo la lista de todos los logros disponibles en el sistema.
+	 * @author Hugo
+	 */
+	public ArrayList<String> getTodosLosLogros() {
+	    return miModelo.obtenerTodosLosLogros();
+	}
+	
+	public boolean quitarLogro(String usuario, String logro) {
+	    return miModelo.eliminarLogroUsuario(usuario, logro);
 	}
 	
 }
