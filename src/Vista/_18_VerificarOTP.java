@@ -6,6 +6,8 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagLayout;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -67,6 +69,22 @@ public class _18_VerificarOTP extends JFrame implements Vista {
         txtCodigo.setBorder(new LineBorder(Color.GRAY));
         txtCodigo.setBounds(100, 160, 300, 60);
         panelCentral.add(txtCodigo);
+        txtCodigo.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                // Detectamos si la tecla pulsada es Enter
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    // Obtenemos el texto y validamos que no esté vacío antes de llamar al controlador
+                    String codigo = txtCodigo.getText().trim();
+                    
+                    if (!codigo.isEmpty()) {
+                        if (miControlador != null) {
+                            miControlador.validarCodigoOTP(codigo);
+                        }
+                    }
+                }
+            }
+        });
 
         btnVerificar = new JButton("VERIFICAR CUENTA");
         estilizarBoton(btnVerificar, NARANJA, Color.BLACK);

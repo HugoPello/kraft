@@ -24,8 +24,6 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import com.mysql.cj.jdbc.CallableStatement;
-
 import Modelo.Modelo;
 import Vista.Vista;
 import Vista._00_Login;
@@ -94,40 +92,45 @@ public class Controlador {
 	// =========================================================================
 
 	public void login() {
-		_00_Login vista = (_00_Login) misVistas[0];
+	    _00_Login vista = (_00_Login) misVistas[0];
+	    
+	    if (!miModelo.conectarBD()) {
+	        vista.mostrarError("Error de conexión con la base de datos.");
+	        return;
+	    }
 
-		if (!miModelo.conectarBD()) {
-			vista.mostrarError("Error: No se pudo conectar a la base de datos. Revisa la configuración.");
-			return;
-		}
+	    String usr = vista.getTxtUsu();
+	    String pwd = vista.getTxtPwd();
 
-		String usr = vista.getTxtUsu();
-		String pwd = vista.getTxtPwd();
+	    String resultado = miModelo.loginSeguro(usr, pwd);
 
-		miModelo.loginSeguro(usr, pwd);
-		String resultado = miModelo.getResultado();
+	    switch (resultado) {
+	        case "OTP_ENVIADO":
+	            // Flujo de seguridad 2FA
+	            String otp = miModelo.obtenerUltimoOTP(usr);
+	            String email = miModelo.sacarEmail();
+	            new Servicios.Email().enviarCorreoOTP(email, otp);
+	            
+	            cambiarVentana(0, 18); // Ir a Verificación OTP
+	            break;
 
-		// Protección anti NullPointer por si acaso
-		if (resultado == null) {
-			vista.mostrarError("Error crítico de comunicación con la Base de Datos.");
-			return;
-		}
+	        case "LOGIN_DIRECTO":
+	            // Flujo para cuentas antiguas sin 2FA
+	            if (miModelo.isAdmin()) {
+	                cambiarVentana(0, 11);
+	            } else {
+	                cambiarVentana(0, 2);
+	            }
+	            break;
 
-		if (resultado.equals("Correcto")) {
-			miModelo.setUsuarioLogueado(usr);
-			vista.limpiarMensaje();
-			if (miModelo.isAdmin()) {
-				cambiarVentana(0, 11);
-			} else {
-				cambiarVentana(0, 2);
-			}
-		} else if (resultado.equals("Incorrecto")) {
-			vista.mostrarError("Usuario o contraseña incorrectos");
-		} else if (resultado.equals("ErrorBD")) {
-			vista.mostrarError("La Base de datos rechazó la consulta. Revisa tu consola de Eclipse.");
-		} else {
-			System.exit(0);
-		}
+	        case "INCORRECTO":
+	            vista.mostrarError("Usuario o contraseña incorrectos");
+	            break;
+
+	        default:
+	            vista.mostrarError("Error crítico en el sistema.");
+	            break;
+	    }
 	}
 	
 	/**
@@ -749,22 +752,25 @@ public class Controlador {
 	 * 
 	 * @param codigoIntroducido El token de 6 caracteres que el usuario recibió por email.
 	 */
+	// @Author: Hugo
 	public void validarCodigoOTP(String codigoIntroducido) {
-	    // Obtenemos el usuario que se acaba de registrar (puedes guardarlo en una variable global al registrar)
 	    String usr = miModelo.getUltimoUsuarioRegistrado(); 
 
-	    // Preparamos la llamada al procedimiento almacenado 'validate_otp'
-	    try (CallableStatement cst = (CallableStatement) miModelo.getConexion().prepareCall("{call validate_otp(?, ?)}")) {
+	    try (java.sql.CallableStatement cst = (java.sql.CallableStatement) miModelo.getConexion().prepareCall("{call validate_otp(?, ?)}")) {
 	        cst.setString(1, usr);
 	        cst.setString(2, codigoIntroducido);
-	        cst.execute(); // Ejecuta el procedimiento que cambia is_verified a 1
+	        cst.execute();
 
-	        JOptionPane.showMessageDialog(null, "¡Cuenta activada! Ya puedes iniciar sesión.");
-	        cambiarVentana(18, 0); // Volver al login tras el éxito
+	        // ÉXITO: Ahora entramos a la aplicación
+	        miModelo.setUsuarioLogueado(usr);
+	        if (miModelo.isAdmin()) {
+	            cambiarVentana(18, 11); // Al panel admin
+	        } else {
+	            cambiarVentana(18, 2);  // Al inicio
+	        }
 
 	    } catch (SQLException e) {
-	        // Aquí capturamos el SIGNAL SQLSTATE '45000' que configuramos en MySQL
-	        JOptionPane.showMessageDialog(null, e.getMessage(), "Error de Verificación", JOptionPane.ERROR_MESSAGE);
+	        JOptionPane.showMessageDialog(null, "Código inválido o expirado.", "Error 2FA", JOptionPane.ERROR_MESSAGE);
 	    }
 	}
 	

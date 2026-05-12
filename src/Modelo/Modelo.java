@@ -21,6 +21,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import com.mysql.cj.jdbc.CallableStatement;
+
 import Vista.Vista;
 
 public class Modelo {
@@ -277,34 +279,48 @@ public class Modelo {
 	
 	
 	/**
-	 * Realiza la validación de credenciales del usuario contra la base de datos.
-	 * El acceso solo se permite si el usuario existe, la contraseña coincide 
-	 * y el campo 'is_verified' es igual a 1 (activación por OTP).
-	 * 
-	 * @param usr Identificador del usuario.
-	 * @param pwd Contraseña introducida.
+	 * Realiza un login adaptativo. 
+	 * Detecta si el usuario requiere 2FA (tiene email) o si es una cuenta antigua.
+	 * @return "OTP_ENVIADO", "LOGIN_DIRECTO" o "INCORRECTO"
 	 */
-	public void loginSeguro(String usr, String pwd) {
-		String query = "SELECT * FROM USERS WHERE USR=? AND PWD=? AND is_verified=1";
-		try {
-			PreparedStatement pstmt = conexion.prepareStatement(query);
-			pstmt.setString(1, usr);
-			pstmt.setString(2, pwd);
-			ResultSet rset = pstmt.executeQuery();
+	public String loginSeguro(String usr, String pwd) {
+	    // 1. Buscamos al usuario sin filtrar por is_verified aún para permitir acceso a cuentas antiguas
+	    String query = "SELECT correo, is_verified, ROL FROM USERS WHERE USR=? AND PWD=?";
+	    
+	    try {
+	        PreparedStatement pstmt = conexion.prepareStatement(query);
+	        pstmt.setString(1, usr);
+	        pstmt.setString(2, pwd);
+	        ResultSet rset = pstmt.executeQuery();
 
-			if (rset.next()) {
-				resultado = "Correcto";
-				this.ROL = rset.getBoolean("ROL");
-				this.fallos = 0;
-			} else {
-				fallos++;
-				resultado = (fallos == 3) ? "Cerrar" : "Incorrecto";
-			}
-		} catch (SQLException e) {
-			System.err.println("=== ERROR SQL EN LOGIN ===");
-			e.printStackTrace(); // Esto te dirá el fallo real (tabla no existe, etc)
-			resultado = "ErrorBD"; // Blindamos el resultado para que no sea null
-		}
+	        if (rset.next()) {
+	            this.usuarioLogueado = usr;
+	            this.ROL = rset.getBoolean("ROL");
+	            String email = rset.getString("correo");
+	            int verificado = rset.getInt("is_verified");
+
+	            // CASO A: Tiene email configurado (Cuenta nueva o actualizada)
+	            if (email != null && !email.trim().isEmpty()) {
+	                // Generamos el OTP mediante el procedimiento
+	                try (java.sql.CallableStatement cst = conexion.prepareCall("{call create_otp(?)}")) {
+	                    cst.setString(1, usr);
+	                    cst.execute();
+	                }
+	                this.ultimoUsuarioRegistrado = usr;
+	                return "OTP_ENVIADO";
+	            } 
+	            
+	            // CASO B: No tiene email (Cuenta antigua)
+	            // Entra directamente para no bloquear al usuario
+	            return "LOGIN_DIRECTO";
+	            
+	        } else {
+	            return "INCORRECTO";
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error en Login Adaptativo: " + e.getMessage());
+	        return "ERROR_BD";
+	    }
 	}
 
 	/**
@@ -840,5 +856,14 @@ public class Modelo {
 
 	public String getUltimoUsuarioRegistrado() {
 	    return this.ultimoUsuarioRegistrado;
+	}
+	
+	/**
+	 * Establece el nombre del usuario que está intentando acceder o registrarse.
+	 * Se utiliza para que la ventana de verificación OTP sepa a qué usuario validar.
+	 * * @param usr Nombre de usuario
+	 */
+	public void setUltimoUsuarioRegistrado(String usr) {
+	    this.ultimoUsuarioRegistrado = usr;
 	}
 }
