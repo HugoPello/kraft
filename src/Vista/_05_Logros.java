@@ -89,22 +89,10 @@ public class _05_Logros extends JFrame implements Vista {
 		panelCentral.add(lblLogros, BorderLayout.NORTH);
 
 		// --- TABLA GRANDE DE LOGROS ---
-		String[] columnas = { "LOGRO", "DESCRIPCIÓN", "RECOMPENSA", "ESTADO" };
-		Object[][] datos = {
-				{ "Apisonadora", "Camina un total de 50km y conviértete en el loco del cardio", "500 XP", "Pendiente" },
-				{ "Correcaminos", "Corre al menos 21 días en un solo mes", "Gold Badge", "Pendiente" },
-				{ "Phelps", "Nada un total de 25km en un mes", "Aleta de Oro", "Pendiente" },
-				{ "Ironman?", "Nada 3km, Bici 181km y Carrera 42km", "Título Legendario", "Pendiente" },
-				{ "Salud Cardíaca", "Sal a caminar todos los días durante una semana", "100 XP", "Pendiente" },
-				{ "Explorador", "Aguanta 2 días de acampada seguidos", "Tienda Pro", "Pendiente" },
-				{ "Madrugador", "Entrena antes de las 7:00 AM", "Café Virtual", "Pendiente" },
-				{ "Hidratación Pro", "Bebe 2L de agua diarios durante 15 días", "Skin Botella", "Pendiente" } };
-
-		modeloTabla = new DefaultTableModel(datos, columnas) {
-			@Override
-			public boolean isCellEditable(int row, int column) {
-				return false;
-			}
+		String[] columnas = { "LOGRO", "DESCRIPCIÓN", "RECOMPENSA", "PROGRESO" };
+		modeloTabla = new DefaultTableModel(null, columnas) { // null para que no haya datos fijos
+		    @Override
+		    public boolean isCellEditable(int row, int column) { return false; }
 		};
 
 		tablaLogros = new JTable(modeloTabla);
@@ -202,26 +190,31 @@ public class _05_Logros extends JFrame implements Vista {
 	@Override
 	public void setControlador(Controlador miControlador) {
 		this.miControlador = miControlador;
+		this.addComponentListener(new java.awt.event.ComponentAdapter() {
+		    @Override
+		    public void componentShown(java.awt.event.ComponentEvent e) {
+		        cargarDatosLogros(); // Solo se ejecuta cuando la ventana se vuelve visible
+		    }
+		});
 	}
-
+	
 	public void cargarDatosLogros() {
-	    // Definimos las cabeceras incluyendo la nueva columna de progreso
-	    String[] cabecera = {"LOGRO", "DESCRIPCIÓN", "PUNTOS", "PROGRESO"};
+	    String[] cabecera = {"LOGRO", "DESCRIPCIÓN", "RECOMPENSA", "PROGRESO"};
 	    
-	    // Pedimos los datos procesados al controlador
+	    // Obtenemos los datos desde el controlador
 	    Object[][] datosRaw = miControlador.getTablaLogrosDisponibles();
 	    
-	    // Formateamos visualmente el progreso antes de mostrarlo en la tabla
+	    // Formateamos el % solo si hay registros reales
 	    if (datosRaw != null && datosRaw.length > 0 && !datosRaw[0][0].equals("Sin registros")) {
 	        for (int i = 0; i < datosRaw.length; i++) {
-	            // El valor de progreso viene en el índice 3
-	            datosRaw[i][3] = datosRaw[i][3] + "%";
+	            datosRaw[i][3] = datosRaw[i][3] + "%"; 
 	        }
 	    }
 	    
-	    // Actualizamos el modelo de la tabla
+	    // Actualizamos la tabla
 	    modeloTabla.setDataVector(datosRaw, cabecera);
 	    configurarEstiloTabla();
+	    // ELIMINA la línea de cargarDatosLogros() que había aquí al final
 	}
-
+	
 }

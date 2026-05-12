@@ -850,13 +850,15 @@ public class Modelo {
 	 * Filtra los logros para que desaparezcan una vez marcados como 'hechos'.
 	 */
 	public Object[][] obtenerLogrosPendientes(String usuario) {
-	    // Usamos COALESCE para devolver 0 si el usuario aún no tiene registro de progreso
+	    // Esta query es la clave: 
+	    // 1. Muestra el nombre, descripción y puntos de LOGROS.
+	    // 2. Coge el progreso de HACER_LOGRO (si no existe, pone 0).
+	    // 3. FILTRO: Solo muestra si NO está hecho (esta_hecho = 0).
 	    String sql = "SELECT L.nombre, L.descripcion, L.puntos_logros, COALESCE(HL.progreso, 0) " +
 	                 "FROM LOGROS L " +
 	                 "LEFT JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro AND HL.nombreUsuario = ? " +
 	                 "WHERE HL.esta_hecho IS NULL OR HL.esta_hecho = 0";
 	    
-	    // El motor genérico se encarga de ejecutar la consulta y devolver el array
 	    return obtenerDatosTabla(sql, 4, usuario);
 	}
 
