@@ -72,7 +72,6 @@ public class _02_Inicio extends JFrame implements Vista {
 		panelBotonesHeader.add(crearBotonIcono("🏅", 5)); // <--- NUEVO: Logros (_05_Logros)
 		panelBotonesHeader.add(crearBotonIcono("🏆", 6)); // Ranking (_06_Ranking)
 		panelBotonesHeader.add(crearBotonIcono("⚙", 11)); // Panel Admin / Ajustes
-
 		panelBotonesHeader.add(Box.createHorizontalStrut(20));
 		panelBotonesHeader.add(crearBotonControl("-", Color.GRAY, e -> setState(JFrame.ICONIFIED)));
 		panelBotonesHeader.add(crearBotonControl("X", new Color(220, 40, 40), e -> System.exit(0)));
