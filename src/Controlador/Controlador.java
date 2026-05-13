@@ -527,12 +527,12 @@ public class Controlador {
 	}
 
 	public Object[][] getRankingMundial() {
-		return miModelo.obtenerDatosTabla("SELECT USR, puntos FROM USERS ORDER BY puntos DESC LIMIT 10", 2);
+		return miModelo.obtenerDatosTabla("SELECT USR, puntos FROM USERS ORDER BY puntos DESC LIMIT 50", 2);
 	}
 
 	public Object[][] getRankingSemanal() {
 		return miModelo.obtenerDatosTabla(
-				"SELECT CA.nombreUsuario, SUM(A.puntos) FROM COMPLETAR_ACTIVIDAD CA JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad WHERE YEARWEEK(CA.fecha_realizacion, 1) = YEARWEEK(CURRENT_DATE(), 1) GROUP BY CA.nombreUsuario ORDER BY SUM(A.puntos) DESC LIMIT 10",
+				"SELECT CA.nombreUsuario, SUM(A.puntos) FROM COMPLETAR_ACTIVIDAD CA JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad WHERE YEARWEEK(CA.fecha_realizacion, 1) = YEARWEEK(CURRENT_DATE(), 1) GROUP BY CA.nombreUsuario ORDER BY SUM(A.puntos) DESC LIMIT 30",
 				2);
 	}
 
