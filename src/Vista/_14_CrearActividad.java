@@ -44,6 +44,7 @@ public class _14_CrearActividad extends JFrame implements Vista {
 	private JSpinner spnPuntos;
 	private JComboBox<String> cbxFrecuencia;
 	private JComboBox<String> cbxUnidad;
+	private JComboBox<String> cbxCategoria; // NUEVO: Para enlazar con los logros
 
 	public _14_CrearActividad() {
 		setBounds(0, 0, 1920, 1080);
@@ -92,7 +93,7 @@ public class _14_CrearActividad extends JFrame implements Vista {
 		JPanel cajaCrear = new JPanel(null);
 		cajaCrear.setBackground(GRIS_RECTANGULO);
 		cajaCrear.setBorder(new LineBorder(NARANJA, 3));
-		cajaCrear.setPreferredSize(new Dimension(800, 650)); // Altura ampliada
+		cajaCrear.setPreferredSize(new Dimension(800, 650));
 		panelCentral.add(cajaCrear);
 
 		JLabel tituloAjustes = new JLabel("➕ NUEVA ACTIVIDAD");
@@ -149,7 +150,6 @@ public class _14_CrearActividad extends JFrame implements Vista {
 		lblPuntos.setBounds(50, 270, 300, 30);
 		cajaCrear.add(lblPuntos);
 
-		// Spinner de 10 en 10, empezando en 50
 		spnPuntos = new JSpinner(new SpinnerNumberModel(50, 10, 10000, 10));
 		spnPuntos.setFont(new Font("Arial", Font.BOLD, 16));
 		spnPuntos.setBounds(50, 300, 330, 35);
@@ -167,7 +167,7 @@ public class _14_CrearActividad extends JFrame implements Vista {
 		cbxFrecuencia.setBounds(420, 300, 330, 35);
 		cajaCrear.add(cbxFrecuencia);
 
-		// 6. UNIDAD DE MEDIDA
+		// 6. UNIDAD DE MEDIDA Y META
 		JLabel lblUnidad = new JLabel("Unidad de Medida (Meta):");
 		lblUnidad.setFont(new Font("Arial", Font.BOLD, 16));
 		lblUnidad.setForeground(Color.LIGHT_GRAY);
@@ -190,6 +190,20 @@ public class _14_CrearActividad extends JFrame implements Vista {
 		spnCantidadMeta.setFont(new Font("Arial", Font.BOLD, 16));
 		spnCantidadMeta.setBounds(420, 380, 330, 35);
 		cajaCrear.add(spnCantidadMeta);
+
+		// 7. CATEGORÍA DE LOGRO (NUEVO)
+		JLabel lblCat = new JLabel("Categoría de Logro (P. Clave):");
+		lblCat.setFont(new Font("Arial", Font.BOLD, 16));
+		lblCat.setForeground(Color.LIGHT_GRAY);
+		lblCat.setBounds(50, 430, 300, 30);
+		cajaCrear.add(lblCat);
+
+		// La opción "Ninguna" sirve por si crean una actividad que no afecta a los
+		// logros
+		cbxCategoria = new JComboBox<>(new String[] { "Ninguna", "WALK", "RUN", "BIKE", "POWER", "SWIM" });
+		cbxCategoria.setFont(new Font("Arial", Font.PLAIN, 16));
+		cbxCategoria.setBounds(50, 460, 330, 35);
+		cajaCrear.add(cbxCategoria);
 
 		// --- BOTONES ---
 		JButton btnCrear = new JButton("CREAR ACTIVIDAD");
@@ -226,7 +240,6 @@ public class _14_CrearActividad extends JFrame implements Vista {
 	@Override
 	public void setControlador(Controlador miControlador) {
 		this.miControlador = miControlador;
-
 	}
 
 	public String getNombreActividad() {
@@ -257,6 +270,13 @@ public class _14_CrearActividad extends JFrame implements Vista {
 		return (Double) spnCantidadMeta.getValue();
 	}
 
+	// NUEVO GETTER
+	public String getCategoriaActividad() {
+		String seleccion = (String) cbxCategoria.getSelectedItem();
+		// Si seleccionan "Ninguna", devolvemos null para que en la BD se guarde vacío
+		return seleccion.equals("Ninguna") ? null : seleccion;
+	}
+
 	public void mostrarMensaje(String mensaje) {
 		JOptionPane.showMessageDialog(this, mensaje, "Gestión de Actividades", JOptionPane.INFORMATION_MESSAGE);
 	}
@@ -268,5 +288,6 @@ public class _14_CrearActividad extends JFrame implements Vista {
 		cbxDificultad.setSelectedIndex(0);
 		cbxFrecuencia.setSelectedIndex(0);
 		cbxUnidad.setSelectedIndex(0);
+		cbxCategoria.setSelectedIndex(0); // Reiniciar categoría
 	}
 }

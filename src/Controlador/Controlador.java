@@ -30,6 +30,7 @@ import Vista._00_Login;
 import Vista._01_Registro;
 import Vista._02_Inicio;
 import Vista._04_DentroActividad;
+import Vista._05_Logros;
 import Vista._08_PerfilUsuario;
 import Vista._09_OlvidoContraseña;
 import Vista._10_CrearEventoAdmin;
@@ -62,13 +63,19 @@ public class Controlador {
 	// =========================================================================
 
 	public void cambiarVentana(int desde, int hasta) {
-		if (hasta == 11 && !miModelo.esUsuarioAdmin()) {
-			javax.swing.JOptionPane.showMessageDialog(null, "Acceso denegado: Se requieren permisos de administrador.",
-					"Seguridad del Sistema", javax.swing.JOptionPane.ERROR_MESSAGE);
-			return;
-		}
-		((JFrame) misVistas[desde]).setVisible(false);
-		((JFrame) misVistas[hasta]).setVisible(true);
+	    if (hasta == 11 && !miModelo.esUsuarioAdmin()) {
+	        javax.swing.JOptionPane.showMessageDialog(null, "Acceso denegado: Se requieren permisos de administrador.",
+	                "Seguridad del Sistema", javax.swing.JOptionPane.ERROR_MESSAGE);
+	        return;
+	    }
+	    
+	    // ¡NUEVO! Refresco forzado y seguro antes de abrir la pestaña de Logros
+	    if (hasta == 5 && misVistas[5] instanceof _05_Logros) {
+	        ((_05_Logros) misVistas[5]).cargarDatosLogros();
+	    }
+	    
+	    ((JFrame) misVistas[desde]).setVisible(false);
+	    ((JFrame) misVistas[hasta]).setVisible(true);
 	}
 
 	public void abrirConfiguracionPopUp() {
@@ -661,28 +668,33 @@ public class Controlador {
 	}
 
 	public void guardarNuevaActividad() {
-		_14_CrearActividad vistaCrear = (_14_CrearActividad) misVistas[15];
-		String nombre = vistaCrear.getNombreActividad();
-		String tipo = vistaCrear.getTipoActividad();
-		String dif = vistaCrear.getDificultadActividad();
-		int pts = vistaCrear.getPuntosActividad();
-		String frec = vistaCrear.getFrecuenciaActividad();
-		String unidad = vistaCrear.getUnidadActividad();
-		double cantidad = vistaCrear.getCantidadMeta(); // Recogemos la cantidad
+	    _14_CrearActividad vistaCrear = (_14_CrearActividad) misVistas[15];
+	    String nombre = vistaCrear.getNombreActividad();
+	    String tipo = vistaCrear.getTipoActividad();
+	    String dif = vistaCrear.getDificultadActividad();
+	    int pts = vistaCrear.getPuntosActividad();
+	    String frec = vistaCrear.getFrecuenciaActividad();
+	    String unidad = vistaCrear.getUnidadActividad();
+	    double cantidad = vistaCrear.getCantidadMeta();
+	    
+	    // ¡NUEVO! Recogemos la categoría (WALK, RUN, etc.)
+	    String categoria = vistaCrear.getCategoriaActividad(); 
 
-		if (nombre == null || nombre.trim().isEmpty()) {
-			vistaCrear.mostrarMensaje("Error: El nombre es obligatorio.");
-			return;
-		}
+	    if (nombre == null || nombre.trim().isEmpty()) {
+	        vistaCrear.mostrarMensaje("Error: El nombre es obligatorio.");
+	        return;
+	    }
 
-		boolean exito = miModelo.crearActividad(nombre, tipo, dif, pts, frec, unidad, cantidad);
-		if (exito) {
-			vistaCrear.mostrarMensaje("¡Actividad '" + nombre + "' creada correctamente!");
-			vistaCrear.limpiarFormulario();
-			cambiarVentana(14, 3);
-		} else {
-			vistaCrear.mostrarMensaje("Error en la Base de Datos al crear actividad.");
-		}
+	    // Le pasamos el parámetro extra al Modelo
+	    boolean exito = miModelo.crearActividad(nombre, tipo, dif, pts, frec, unidad, cantidad, categoria);
+	    
+	    if (exito) {
+	        vistaCrear.mostrarMensaje("¡Actividad '" + nombre + "' creada correctamente!");
+	        vistaCrear.limpiarFormulario();
+	        cambiarVentana(14, 3);
+	    } else {
+	        vistaCrear.mostrarMensaje("Error en la Base de Datos al crear actividad.");
+	    }
 	}
 
 	public void completarActividad() {
@@ -772,6 +784,14 @@ public class Controlador {
 			vista.mostrarMensaje("Error al actualizar. Es posible que el nombre de usuario ya esté en uso.");
 		}
 	}
+	
+	public void marcarLogroCompletado(String nombreLogro) {
+	    String usr = miModelo.getUsuarioLogueado();
+	    if (miModelo.completarLogroEnBD(usr, nombreLogro)) {
+	        // Refrescamos la tabla de la vista inmediatamente
+	        ((_05_Logros) misVistas[5]).cargarDatosLogros();
+	    }
+	}
 
 	public void alAbrirAjustes() {
 		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
@@ -824,10 +844,6 @@ public class Controlador {
 		return miModelo.consultarPuntosUsuario(usuario);
 	}
 
-	public ArrayList<String> getLogrosUsuario(String usuario) {
-		return miModelo.obtenerLogrosUsuario(usuario);
-	}
-
 	/**
 	 * Solicita al modelo la lista de todos los logros disponibles en el sistema.
 	 * 
@@ -841,4 +857,7 @@ public class Controlador {
 		return miModelo.eliminarLogroUsuario(usuario, logro);
 	}
 
+	public Object[][] getTablaLogrosDisponibles() {
+		return miModelo.obtenerLogrosPendientes(miModelo.getUsuarioLogueado());
+	}
 }
