@@ -20,6 +20,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import com.mysql.cj.jdbc.CallableStatement;
+
 import Vista.Vista;
 
 public class Modelo {
@@ -52,11 +54,11 @@ public class Modelo {
 	}
 
 	// LECTURA FICHERO
-	
+
 	/**
-	 * Carga los parámetros de conexión desde un archivo externo .ini.
-	 * Permite que la aplicación sea portable sin necesidad de recompilar el código 
-	 * ante cambios en el servidor de base de datos.
+	 * Carga los parámetros de conexión desde un archivo externo .ini. Permite que
+	 * la aplicación sea portable sin necesidad de recompilar el código ante cambios
+	 * en el servidor de base de datos.
 	 */
 	public void leerConfig() {
 		try (BufferedReader br = new BufferedReader(new FileReader("config.ini"))) {
@@ -103,19 +105,27 @@ public class Modelo {
 	}
 
 	/**
-	 * Establece la conexión física con el servidor de base de datos MySQL.
-	 * Carga el driver JDBC dinámicamente y utiliza las credenciales obtenidas
-	 * del archivo de configuración para abrir un socket de comunicación.
-	 * * @return true si la conexión se establece o ya estaba abierta; false si hay error de red o credenciales.
+	 * <<<<<<< HEAD Establece la conexión física con el servidor de base de datos
+	 * MySQL. Carga el driver JDBC dinámicamente y utiliza las credenciales
+	 * obtenidas del archivo de configuración para abrir un socket de comunicación.
+	 * * @return true si la conexión se establece o ya estaba abierta; false si hay
+	 * error de red o credenciales. ======= Establece la conexión física con el
+	 * servidor de base de datos MySQL. Carga el driver JDBC dinámicamente y utiliza
+	 * las credenciales obtenidas del archivo de configuración para abrir un socket
+	 * de comunicación. * @return true si la conexión se establece o ya estaba
+	 * abierta; false si hay error de red o credenciales. >>>>>>>
+	 * refs/remotes/origin/Carlos
 	 */
 	public boolean conectarBD() {
 		try {
 			System.out.println("Conectando a: " + url);
-			
-			// Verificación de estado: Solo intentamos conectar si la conexión es nula o se ha cerrado
+
+			// Verificación de estado: Solo intentamos conectar si la conexión es nula o se
+			// ha cerrado
 			if (conexion == null || conexion.isClosed()) {
 				Class.forName("com.mysql.cj.jdbc.Driver");
-				// Intento de autenticación mediante el DriverManager utilizando la URL y credenciales del .ini
+				// Intento de autenticación mediante el DriverManager utilizando la URL y
+				// credenciales del .ini
 				conexion = DriverManager.getConnection(url, login, pwdDB);
 				System.out.println("-> Conexión establecida");
 			}
@@ -203,10 +213,18 @@ public class Modelo {
 
 	/**
 	 * Motor de consulta genérico para obtener datos de una columna específica.
-	 * Utiliza Varargs para permitir un número dinámico de parámetros en el PreparedStatement.
-	 * * @param query Sentencia SQL con marcadores '?'
+	 * <<<<<<< HEAD Utiliza Varargs para permitir un número dinámico de parámetros
+	 * en el PreparedStatement. * @param query Sentencia SQL con marcadores '?'
+	 * 
 	 * @param nombreColumna Etiqueta de la columna a extraer
-	 * @param parametros Valores para inyectar en los marcadores de la query
+	 * @param parametros    Valores para inyectar en los marcadores de la query
+	 *                      ======= Utiliza Varargs para permitir un número dinámico
+	 *                      de parámetros en el PreparedStatement. * @param query
+	 *                      Sentencia SQL con marcadores '?'
+	 * 
+	 * @param nombreColumna Etiqueta de la columna a extraer
+	 * @param parametros    Valores para inyectar en los marcadores de la query
+	 *                      >>>>>>> refs/remotes/origin/Carlos
 	 * @return Array de String con los resultados o mensaje de "No hay datos"
 	 */
 	public String[] obtenerDatosColumna(String query, String nombreColumna, Object... parametros) {
@@ -237,6 +255,40 @@ public class Modelo {
 		}
 
 		return listaDatos.toArray(new String[0]);
+	}
+
+	/**
+	 * Obtiene la lista de nombres de logros desbloqueados por un usuario. d
+	 * * @return ArrayList con los nombres de los logros.
+	 */
+	public ArrayList<String> obtenerLogrosUsuario(String usuario) {
+		ArrayList<String> logros = new ArrayList<>();
+		String sql = "SELECT L.nombre FROM LOGROS L " + "JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro "
+				+ "WHERE HL.nombreUsuario = ?";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ps.setString(1, usuario);
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				logros.add(rs.getString("nombre"));
+			}
+		} catch (SQLException e) {
+			System.err.println("Error al obtener logros: " + e.getMessage());
+		}
+		return logros;
+	}
+
+	public ArrayList<String> obtenerTodosLosLogros() {
+		ArrayList<String> lista = new ArrayList<>();
+		String sql = "SELECT nombre FROM LOGROS";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				lista.add(rs.getString("nombre"));
+			}
+		} catch (SQLException e) {
+			System.err.println("Error al cargar logros globales: " + e.getMessage());
+		}
+		return lista;
 	}
 
 	public Object[][] obtenerDatosTabla(String query, int numColumnas, Object... parametros) {
@@ -277,16 +329,26 @@ public class Modelo {
 	// =========================================================================
 	// 4. AUTENTICACIÓN Y GESTIÓN DE USUARIOS
 	// =========================================================================
-	
+
+
 	/**
-	 * Realiza la validación de credenciales del usuario contra la base de datos.
-	 * El acceso solo se permite si el usuario existe, la contraseña coincide 
-	 * y el campo 'is_verified' es igual a 1 (activación por OTP).
-	 * * @param usr Identificador del usuario.
-	 * @param pwd Contraseña introducida.
+	 * <<<<<<< HEAD Realiza la validación de credenciales del usuario contra la base
+	 * de datos. El acceso solo se permite si el usuario existe, la contraseña
+	 * coincide y el campo 'is_verified' es igual a 1 (activación por OTP). * @param
+	 * usr Identificador del usuario.
+	 * 
+	 * @param pwd Contraseña introducida. ======= Realiza un login adaptativo.
+	 *            Detecta si el usuario requiere 2FA (tiene email) o si es una
+	 *            cuenta antigua.
+	 * 
+	 * @return "OTP_ENVIADO", "LOGIN_DIRECTO" o "INCORRECTO" >>>>>>>
+	 *         refs/remotes/origin/Carlos
 	 */
-	public void loginSeguro(String usr, String pwd) {
-		String query = "SELECT * FROM USERS WHERE USR=? AND PWD=? AND is_verified=1";
+	public String loginSeguro(String usr, String pwd) {
+		// 1. Buscamos al usuario sin filtrar por is_verified aún para permitir acceso a
+		// cuentas antiguas
+		String query = "SELECT correo, is_verified, ROL FROM USERS WHERE USR=? AND PWD=?";
+
 		try {
 			PreparedStatement pstmt = conexion.prepareStatement(query);
 			pstmt.setString(1, usr);
@@ -294,25 +356,52 @@ public class Modelo {
 			ResultSet rset = pstmt.executeQuery();
 
 			if (rset.next()) {
-				resultado = "Correcto";
+				this.usuarioLogueado = usr;
 				this.ROL = rset.getBoolean("ROL");
-				this.fallos = 0;
+				String email = rset.getString("correo");
+				int verificado = rset.getInt("is_verified");
+
+				// CASO A: Tiene email configurado (Cuenta nueva o actualizada)
+				if (email != null && !email.trim().isEmpty()) {
+					// Generamos el OTP mediante el procedimiento
+					try (java.sql.CallableStatement cst = conexion.prepareCall("{call create_otp(?)}")) {
+						cst.setString(1, usr);
+						cst.execute();
+					}
+					this.ultimoUsuarioRegistrado = usr;
+					return "OTP_ENVIADO";
+				}
+
+				// CASO B: No tiene email (Cuenta antigua)
+				// Entra directamente para no bloquear al usuario
+				return "LOGIN_DIRECTO";
+
 			} else {
-				fallos++;
-				resultado = (fallos == 3) ? "Cerrar" : "Incorrecto";
+				// LOGIN INCORRECTO
+				this.fallos++;
+				if (this.fallos >= 3) {
+					return "CERRAR";
+				}
+				return "INCORRECTO";
 			}
 		} catch (SQLException e) {
 			System.err.println("=== ERROR SQL EN LOGIN ===");
-			e.printStackTrace(); 
-			resultado = "ErrorBD"; 
+			e.printStackTrace();
+			resultado = "ErrorBD";
+			System.err.println("Error en Login Adaptativo: " + e.getMessage());
+			return "ERROR_BD";
+
 		}
 	}
 
 	/**
 	 * Realiza un registro atómico del usuario utilizando transacciones SQL.
-	 * Garantiza que el usuario no se cree si falla la inserción en la tabla de seguridad.
-	 * * @param usr Nombre de identificación único
-	 * @param pwd Contraseña (texto plano por requerimiento de proyecto)
+	 * 
+	 * Garantiza que el usuario no se cree si falla la inserción en la tabla de
+	 * seguridad. * @param usr Nombre de identificación único
+	 * 
+	 * @param pwd    Contraseña (texto plano por requerimiento de proyecto)
+	 * 
 	 * @param correo Dirección de email para el sistema 2FA
 	 * @return true si el commit se realizó con éxito; false si hubo rollback
 	 */
@@ -321,7 +410,9 @@ public class Modelo {
 		try {
 			conexion.setAutoCommit(false); // Iniciamos transacción
 
-			// 1. Insertamos en USERS incluyendo el correo y el estado de verificación inicial
+			// 1. Insertamos en USERS incluyendo el correo y el estado de verificación
+			// inicial
+
 			String query1 = "INSERT INTO USERS (USR, PWD, ROL, correo, fechaNacimiento, is_verified) VALUES (?, ?, ?, ?, ?, 0)";
 			PreparedStatement ps1 = conexion.prepareStatement(query1);
 			ps1.setString(1, usr);
@@ -351,13 +442,18 @@ public class Modelo {
 		} catch (Exception e) {
 			try {
 				conexion.rollback(); // Si algo falla, deshacemos todo
-			} catch (Exception ex) {}
+
+			} catch (Exception ex) {
+			}
 			System.err.println("Error en registro: " + e.getMessage());
 			return false;
 		} finally {
 			try {
 				conexion.setAutoCommit(true);
-			} catch (Exception ex) {}
+
+			} catch (Exception ex) {
+			}
+
 		}
 	}
 
@@ -375,9 +471,12 @@ public class Modelo {
 	}
 
 	/**
-	 * Inserta un nuevo usuario en el sistema con permisos de usuario estándar (ROL = false).
-	 * Este método es utilizado por el panel de administración para el alta manual de cuentas.
-	 * * @param usr Nombre de usuario único para el nuevo registro.
+	 * 
+	 * Inserta un nuevo usuario en el sistema con permisos de usuario estándar (ROL
+	 * = false). Este método es utilizado por el panel de administración para el
+	 * alta manual de cuentas. * @param usr Nombre de usuario único para el nuevo
+	 * registro.
+	 * 
 	 * @param pwd Contraseña asociada a la cuenta.
 	 * @return true si el usuario se insertó correctamente; false si hubo un error.
 	 */
@@ -441,7 +540,9 @@ public class Modelo {
 		boolean cambiarPwd = (nuevaPwd != null && !nuevaPwd.trim().isEmpty());
 
 		if (cambiarPwd) {
-			sql.append(", PWD = ?"); 
+
+			sql.append(", PWD = ?");
+
 		}
 
 		sql.append(" WHERE USR = ?");
@@ -520,7 +621,9 @@ public class Modelo {
 			ps1.close();
 
 			String descMision = "Hacer " + meta + " " + unidad + " de " + nombre;
-			int recompensaMision = puntos * 2; 
+
+			int recompensaMision = puntos * 2;
+
 			String tipoMision = (frecuencia.equalsIgnoreCase("Semanal")) ? "Semanal" : "Diaria";
 
 			String sqlMision = "INSERT INTO MISIONES (descripcion, recompensa, tipo) VALUES (?, ?, ?)";
@@ -558,7 +661,9 @@ public class Modelo {
 			return false;
 		} finally {
 			try {
-				conexion.setAutoCommit(true); 
+
+				conexion.setAutoCommit(true);
+
 			} catch (SQLException ex) {
 			}
 		}
@@ -566,17 +671,22 @@ public class Modelo {
 
 	/**
 	 * Registra la finalización de una actividad por parte de un usuario específico.
-	 * El método realiza una búsqueda previa del ID de la actividad basándose en su nombre
-	 * para asegurar la integridad referencial antes de insertar el registro en el historial.
-	 * * @param usr El nombre del usuario que completa la acción.
+	 * El método realiza una búsqueda previa del ID de la actividad basándose en su
+	 * nombre para asegurar la integridad referencial antes de insertar el registro
+	 * en el historial.
+	 * 
+	 * @param usr             El nombre del usuario que completa la acción.
 	 * @param nombreActividad El nombre legible de la actividad realizada.
-	 * @param cantidad La cantidad registrada por el usuario para sumar al progreso.
-	 * @return true si se encontró la actividad y se registró el progreso; false en caso contrario.
+	 * @param cantidad        La cantidad registrada por el usuario para sumar al
+	 *                        progreso.
+	 * @return true si se encontró la actividad y se registró el progreso; false en
+	 *         caso contrario.
+	 * 
 	 */
 	public boolean registrarActividadCompletada(String usr, String nombreActividad, double cantidad) {
 		try {
 			int idActividad = -1;
-			
+
 			// Obtenemos el ID numérico asociado al nombre de la actividad.
 			PreparedStatement ps1 = conexion.prepareStatement("SELECT id_actividad FROM ACTIVIDADES WHERE nombre = ?");
 			ps1.setString(1, nombreActividad);
@@ -827,7 +937,7 @@ public class Modelo {
 		}
 		return "El grupo no existe.";
 	}
-	
+
 	public boolean existeUsuario(String usr) {
 		String query = "SELECT USR FROM USERS WHERE USR = ?";
 		try (PreparedStatement pstmt = conexion.prepareStatement(query)) {
@@ -942,17 +1052,18 @@ public class Modelo {
 	public String getUrlDB() {
 		return this.url;
 	}
-	
+
 	/**
-	 * Recupera el código OTP generado automáticamente por el motor de base de datos.
-	 * Este método actúa como puente entre el Trigger de MySQL y el servicio de Email en Java.
-	 * * @param usuario Nombre del usuario recién registrado
+	 * Recupera el código OTP generado automáticamente por el motor de base de
+	 * datos. Este método actúa como puente entre el Trigger de MySQL y el servicio
+	 * de Email en Java. * @param usuario Nombre del usuario recién registrado
+	 * 
 	 * @return El código alfanumérico de 6 caracteres o null si no se encuentra
 	 */
 	public String obtenerUltimoOTP(String usuario) {
 		String otp = null;
 		String sql = "SELECT otp_code FROM OTP_CODES WHERE USR = ? ORDER BY expires_at DESC LIMIT 1";
-		
+
 		try (PreparedStatement pst = conexion.prepareStatement(sql)) {
 			pst.setString(1, usuario);
 			ResultSet rs = pst.executeQuery();
@@ -967,5 +1078,75 @@ public class Modelo {
 
 	public String getUltimoUsuarioRegistrado() {
 		return this.ultimoUsuarioRegistrado;
+	}
+
+	/**
+	 * Establece el nombre del usuario que está intentando acceder o registrarse. Se
+	 * utiliza para que la ventana de verificación OTP sepa a qué usuario validar.
+	 * * @param usr Nombre de usuario
+	 */
+	public void setUltimoUsuarioRegistrado(String usr) {
+		this.ultimoUsuarioRegistrado = usr;
+	}
+
+	public boolean actualizarPuntos(String usuario, int puntos) {
+		// Usamos SUM para que acepte valores negativos (restar) y positivos (sumar)
+		String sql = "UPDATE USERS SET puntos = puntos + ? WHERE USR = ?";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ps.setInt(1, puntos);
+			ps.setString(2, usuario);
+			return ps.executeUpdate() > 0;
+		} catch (SQLException e) {
+			return false;
+		}
+	}
+
+	public boolean asignarLogroAUsuario(String usuario, String nombreLogro) {
+		// 1. Buscamos el ID del logro por su nombre
+		String sqlId = "SELECT id_logro FROM LOGROS WHERE nombre = ?";
+		try {
+			PreparedStatement ps1 = conexion.prepareStatement(sqlId);
+			ps1.setString(1, nombreLogro);
+			ResultSet rs = ps1.executeQuery();
+
+			if (rs.next()) {
+				int id = rs.getInt("id_logro");
+				// 2. Insertamos la relación (HACER_LOGRO es tu tabla intermedia)
+				String sqlIns = "INSERT INTO HACER_LOGRO (nombreUsuario, id_logro, fecha_desbloqueo) VALUES (?, ?, CURRENT_DATE)";
+				PreparedStatement ps2 = conexion.prepareStatement(sqlIns);
+				ps2.setString(1, usuario);
+				ps2.setInt(2, id);
+				return ps2.executeUpdate() > 0;
+			}
+		} catch (SQLException e) {
+			System.err.println("Error al dar logro: " + e.getMessage());
+		}
+		return false;
+	}
+
+	public int consultarPuntosUsuario(String usuario) {
+		String sql = "SELECT puntos FROM USERS WHERE USR = ?";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ps.setString(1, usuario);
+			ResultSet rs = ps.executeQuery();
+			if (rs.next())
+				return rs.getInt("puntos");
+		} catch (SQLException e) {
+			System.err.println("Error al consultar puntos: " + e.getMessage());
+		}
+		return 0;
+	}
+
+	public boolean eliminarLogroUsuario(String usuario, String nombreLogro) {
+		String sql = "DELETE HL FROM HACER_LOGRO HL " + "JOIN LOGROS L ON HL.id_logro = L.id_logro "
+				+ "WHERE HL.nombreUsuario = ? AND L.nombre = ?";
+		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+			ps.setString(1, usuario);
+			ps.setString(2, nombreLogro);
+			return ps.executeUpdate() > 0;
+		} catch (SQLException e) {
+			return false;
+		}
+
 	}
 }
