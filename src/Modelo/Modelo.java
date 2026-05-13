@@ -566,30 +566,38 @@ public class Modelo {
 	// =========================================================================
 
 	public int getPorcentajeCategoria(String usr, String tipo) {
-		String sqlHechas = "SELECT COUNT(DISTINCT CA.id_actividad) FROM COMPLETAR_ACTIVIDAD CA JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad WHERE CA.nombreUsuario = ? AND A.tipo = ?";
-		String sqlTotal = "SELECT COUNT(*) FROM ACTIVIDADES WHERE tipo = ?";
-		try {
-			int hechas = 0, total = 0;
+	    // Subconsulta: Solo cuenta las actividades cuya suma de progreso haya superado su meta
+	    String sqlHechas = "SELECT COUNT(*) FROM ( "
+	                     + "  SELECT CA.id_actividad FROM COMPLETAR_ACTIVIDAD CA "
+	                     + "  JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad "
+	                     + "  WHERE CA.nombreUsuario = ? AND A.tipo = ? "
+	                     + "  GROUP BY CA.id_actividad, A.meta_cantidad "
+	                     + "  HAVING SUM(CA.cantidad) >= A.meta_cantidad "
+	                     + ") as completadas";
+	                     
+	    String sqlTotal = "SELECT COUNT(*) FROM ACTIVIDADES WHERE tipo = ?";
+	    
+	    try {
+	        int hechas = 0, total = 0;
 
-			PreparedStatement ps1 = conexion.prepareStatement(sqlHechas);
-			ps1.setString(1, usr);
-			ps1.setString(2, tipo);
-			ResultSet rs1 = ps1.executeQuery();
-			if (rs1.next())
-				hechas = rs1.getInt(1);
+	        PreparedStatement ps1 = conexion.prepareStatement(sqlHechas);
+	        ps1.setString(1, usr);
+	        ps1.setString(2, tipo);
+	        ResultSet rs1 = ps1.executeQuery();
+	        if (rs1.next()) hechas = rs1.getInt(1);
 
-			PreparedStatement ps2 = conexion.prepareStatement(sqlTotal);
-			ps2.setString(1, tipo);
-			ResultSet rs2 = ps2.executeQuery();
-			if (rs2.next())
-				total = rs2.getInt(1);
+	        PreparedStatement ps2 = conexion.prepareStatement(sqlTotal);
+	        ps2.setString(1, tipo);
+	        ResultSet rs2 = ps2.executeQuery();
+	        if (rs2.next()) total = rs2.getInt(1);
 
-			if (total == 0)
-				return 0;
-			return (int) ((hechas * 100.0) / total);
-		} catch (SQLException e) {
-			return 0;
-		}
+	        if (total == 0) return 0;
+	        // Se calcula el porcentaje exacto de actividades completadas sobre las disponibles
+	        return (int) ((hechas * 100.0) / total);
+	    } catch (SQLException e) {
+	        System.err.println("Error al calcular porcentaje de categoría: " + e.getMessage());
+	        return 0;
+	    }
 	}
 
 	// ¡NUEVO! Añadimos 'String categoria' al final de los parámetros

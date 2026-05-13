@@ -453,10 +453,15 @@ public class Controlador {
 	}
 
 	public Object[][] getTablaLogrosPerfil() {
-		String usr = miModelo.getUsuarioLogueado();
-		String sql = "SELECT L.nombre, DATE_FORMAT(HL.fecha_desbloqueo, '%d/%m/%Y') " + "FROM LOGROS L "
-				+ "JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro " + "WHERE HL.nombreUsuario = ?";
-		return miModelo.obtenerDatosTabla(sql, 2, usr);
+	    String usr = miModelo.getUsuarioLogueado();
+	    
+	    // Añadimos "AND HL.esta_hecho = 1" para que solo aparezcan los completados
+	    String sql = "SELECT L.nombre, DATE_FORMAT(HL.fecha_desbloqueo, '%d/%m/%Y') " + 
+	                 "FROM LOGROS L " +
+	                 "JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro " + 
+	                 "WHERE HL.nombreUsuario = ? AND HL.esta_hecho = 1"; // <--- FILTRO CRÍTICO
+	                 
+	    return miModelo.obtenerDatosTabla(sql, 2, usr);
 	}
 
 	public Object[][] getTablaInventarioPerfil() {
@@ -646,25 +651,33 @@ public class Controlador {
 	}
 
 	public Object[][] getTablaActividadesPorTipo() {
-		String tipo = miModelo.getTipoActividadSeleccionada();
-		String usr = miModelo.getUsuarioLogueado();
+	    String tipo = miModelo.getTipoActividadSeleccionada();
+	    String usr = miModelo.getUsuarioLogueado();
 
-		// Esta súper-consulta calcula cuánto lleva hecho el usuario de cada actividad y
-		// muestra la recompensa
-		String sql = "SELECT A.nombre, A.dificultad, "
-				+ "CONCAT(IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0), ' / ', A.meta_cantidad, ' ', A.unidad_medida), "
-				+ "CONCAT(A.puntos, ' 💰') " + "FROM ACTIVIDADES A WHERE A.tipo = ?";
+	    // Sumamos todo el progreso. Si es MENOR que la meta (o 0), se muestra en disponibles.
+	    String sql = "SELECT A.nombre, A.dificultad, "
+	            + "CONCAT(IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0), ' / ', A.meta_cantidad, ' ', A.unidad_medida), "
+	            + "CONCAT(A.puntos, ' 💰') "
+	            + "FROM ACTIVIDADES A WHERE A.tipo = ? "
+	            + "AND IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0) < A.meta_cantidad";
 
-		// Le pasamos 4 como número de columnas, y los parámetros (usr, tipo)
-		return miModelo.obtenerDatosTabla(sql, 4, usr, tipo);
+	    // Pasamos el usuario dos veces porque hay dos '?' referidos al usuario en la query
+	    return miModelo.obtenerDatosTabla(sql, 4, usr, tipo, usr);
 	}
-
+	
 	public Object[][] getTablaHistorialUsuario() {
-		String usr = miModelo.getUsuarioLogueado();
-		String sql = "SELECT A.nombre, DATE_FORMAT(CA.fecha_realizacion, '%d/%m/%Y %H:%i') " + "FROM ACTIVIDADES A "
-				+ "JOIN COMPLETAR_ACTIVIDAD CA ON A.id_actividad = CA.id_actividad "
-				+ "WHERE CA.nombreUsuario = ? ORDER BY CA.fecha_realizacion DESC";
-		return miModelo.obtenerDatosTabla(sql, 2, usr);
+	    String usr = miModelo.getUsuarioLogueado();
+	    
+	    // Agrupamos por actividad y comprobamos con HAVING que la suma haya llegado a la meta
+	    String sql = "SELECT A.nombre, DATE_FORMAT(MAX(CA.fecha_realizacion), '%d/%m/%Y %H:%i') " 
+	            + "FROM ACTIVIDADES A "
+	            + "JOIN COMPLETAR_ACTIVIDAD CA ON A.id_actividad = CA.id_actividad "
+	            + "WHERE CA.nombreUsuario = ? "
+	            + "GROUP BY A.id_actividad, A.nombre, A.meta_cantidad "
+	            + "HAVING SUM(CA.cantidad) >= A.meta_cantidad "
+	            + "ORDER BY MAX(CA.fecha_realizacion) DESC";
+	            
+	    return miModelo.obtenerDatosTabla(sql, 2, usr);
 	}
 
 	public void guardarNuevaActividad() {
