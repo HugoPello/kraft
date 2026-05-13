@@ -751,36 +751,49 @@ public class Modelo {
 	}
 
 	public ArrayList<Object[]> obtenerMisionesHoy(String usr, String tipo) {
-		ArrayList<Object[]> lista = new ArrayList<>();
-		String sql = "SELECT M.descripcion, RM.progreso, M.recompensa, RM.completada "
-				+ "FROM MISIONES M JOIN REALIZA_MISION RM ON M.id_mision = RM.id_mision "
-				+ "WHERE RM.nombreUsuario = ? AND M.tipo = ? AND RM.fecha_asignacion = CURRENT_DATE";
-		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
-			ps.setString(1, usr);
-			ps.setString(2, tipo);
-			ResultSet rs = ps.executeQuery();
-			while (rs.next()) {
-				String estado = rs.getBoolean("completada") ? "✅ HECHA" : "Progreso: " + rs.getDouble("progreso");
-				lista.add(new Object[] { rs.getString("descripcion"), estado, rs.getInt("recompensa") + " EXP" });
-			}
-		} catch (SQLException e) {
-		}
-		return lista;
+	    ArrayList<Object[]> lista = new ArrayList<>();
+	    // Forzamos el nombre de la columna con "AS completada" y "AS progreso"
+	    String sql = "SELECT DISTINCT M.descripcion, IFNULL(RM.progreso, 0) AS progreso, "
+	               + "M.recompensa, IFNULL(RM.completada, 0) AS completada "
+	               + "FROM MISIONES M "
+	               + "LEFT JOIN REALIZA_MISION RM ON M.id_mision = RM.id_mision AND RM.nombreUsuario = ? "
+	               + "WHERE M.tipo = ?";
+	               
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setString(1, usr);
+	        ps.setString(2, tipo);
+	        ResultSet rs = ps.executeQuery();
+	        while (rs.next()) {
+	            // Ahora rs encontrará "completada" porque lo hemos forzado en el SQL
+	            String estado = rs.getBoolean("completada") ? "✅ HECHA" : "Progreso: " + rs.getDouble("progreso");
+	            lista.add(new Object[] { rs.getString("descripcion"), estado, rs.getInt("recompensa") + " EXP" });
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error al obtener misiones: " + e.getMessage());
+	    }
+	    return lista;
 	}
 
 	public ArrayList<Object[]> obtenerMisiones(String tipoMision) {
-		ArrayList<Object[]> lista = new ArrayList<>();
-		String query = "SELECT descripcion, recompensa FROM MISIONES WHERE tipo = ?";
-		try (PreparedStatement ps = conexion.prepareStatement(query)) {
-			ps.setString(1, tipoMision);
-			ResultSet rs = ps.executeQuery();
+	    ArrayList<Object[]> lista = new ArrayList<>();
+	    // Añadimos el campo 'tipo' a la consulta
+	    String query = "SELECT descripcion, tipo, recompensa FROM MISIONES WHERE tipo = ?";
+	    try (PreparedStatement ps = conexion.prepareStatement(query)) {
+	        ps.setString(1, tipoMision);
+	        ResultSet rs = ps.executeQuery();
 
-			while (rs.next()) {
-				lista.add(new Object[] { rs.getString("descripcion"), rs.getInt("recompensa") + " EXP" });
-			}
-		} catch (SQLException e) {
-		}
-		return lista;
+	        while (rs.next()) {
+	            // Devolvemos los datos limpios para que la JTable los maneje
+	            lista.add(new Object[] { 
+	                rs.getString("descripcion"), 
+	                rs.getString("tipo"), 
+	                rs.getInt("recompensa") + " EXP" 
+	            });
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error en obtenerMisiones: " + e.getMessage());
+	    }
+	    return lista;
 	}
 
 	public ArrayList<Object[]> obtenerEventos() {
@@ -1108,5 +1121,85 @@ public class Modelo {
 		} catch (SQLException e) {
 			return false;
 		}
+	}
+	
+	/**
+	 * Inserta una nueva misión en la base de datos.
+	 */
+	public boolean insertarMision(String descripcion, String tipo, int recompensa) {
+	    String sql = "INSERT INTO MISIONES (descripcion, recompensa, tipo) VALUES (?, ?, ?)";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setString(1, descripcion);
+	        ps.setInt(2, recompensa);
+	        ps.setString(3, tipo);
+	        return ps.executeUpdate() > 0;
+	    } catch (SQLException e) {
+	        System.err.println("Error al insertar misión: " + e.getMessage());
+	        return false;
+	    }
+	}
+
+	/**
+	 * Obtiene todas las misiones para la tabla de gestión del administrador.
+	 */
+	public ArrayList<Object[]> consultarMisionesAdmin() {
+	    ArrayList<Object[]> lista = new ArrayList<>();
+	    // Traemos el ID como primera columna
+	    String sql = "SELECT id_mision, descripcion, tipo, recompensa FROM MISIONES";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql);
+	         ResultSet rs = ps.executeQuery()) {
+	        while (rs.next()) {
+	            // El ID va en la posición 0 del array
+	            lista.add(new Object[]{rs.getInt(1), rs.getString(2), rs.getString(3), rs.getInt(4)});
+	        }
+	    } catch (SQLException e) { e.printStackTrace(); }
+	    return lista;
+	}
+
+	/**
+	 * Elimina una misión por su descripción.
+	 */
+	public boolean eliminarMision(int idMision) { // Ahora recibe el INT
+	    String sql = "DELETE FROM MISIONES WHERE id_mision = ?";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setInt(1, idMision);
+	        return ps.executeUpdate() > 0;
+	    } catch (SQLException e) { return false; }
+	}
+	
+	/**
+	 * Busca la pregunta de seguridad asociada a un usuario específico.
+	 * Realiza un JOIN entre la tabla de relación y la tabla maestra de preguntas.
+	 */
+	public String obtenerPreguntaDeUsuario(String usuario) {
+	    String pregunta = null;
+	    String sql = "SELECT P.enunciado FROM PREGUNTA_SEGURIDAD P " +
+	                 "JOIN RESPONDE_PREGUNTA R ON P.id_pregunta = R.id_pregunta " +
+	                 "WHERE R.nombreUsuario = ?";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setString(1, usuario);
+	        ResultSet rs = ps.executeQuery();
+	        if (rs.next()) {
+	            pregunta = rs.getString("enunciado");
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error al recuperar pregunta: " + e.getMessage());
+	    }
+	    return pregunta;
+	}
+	
+	public boolean verificarRespuestaSoloPorUsuario(String usr, String respuesta) {
+	    String sql = "SELECT respuesta_texto FROM RESPONDE_PREGUNTA WHERE nombreUsuario = ?";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setString(1, usr);
+	        ResultSet rs = ps.executeQuery();
+	        if (rs.next()) {
+	            String respReal = rs.getString("respuesta_texto");
+	            return respReal.equalsIgnoreCase(respuesta.trim());
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error al verificar respuesta: " + e.getMessage());
+	    }
+	    return false;
 	}
 }

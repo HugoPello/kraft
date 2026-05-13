@@ -605,9 +605,9 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 		        if (!titulo.isEmpty()) {
 		            boolean exito = miControlador.añadirNoticia(titulo, tipo);
 		            if (exito) {
-		                // Actualizamos la tabla visual
-		                ((DefaultTableModel) tableNoticias.getModel()).addRow(new Object[]{titulo, tipo});
+		                // El controlador ya llama a actualizarTodasLasTablas(), así que la tabla se refresca sola
 		                txtTitNoticia.setText("");
+		                txtTitNoticia.requestFocus(); // Devuelve el foco al cuadro de texto
 		                JOptionPane.showMessageDialog(null, "Noticia añadida correctamente.");
 		            } else {
 		                JOptionPane.showMessageDialog(null, "Error al añadir la noticia.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -652,7 +652,7 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 		btnQuitarNoticia.setForeground(NARANJA);
 
 		// Botones auxiliares inferiores
-		JButton btnIrCrearEvento = new JButton("Ir a Crear Evento");
+		JButton btnIrCrearEvento = new JButton("Ir a Crear Misión");
 		btnIrCrearEvento.addActionListener(e -> miControlador.cambiarVentana(11, 10));
 		btnIrCrearEvento.setBackground(GRIS_FONDO);
 		btnIrCrearEvento.setForeground(NARANJA);
