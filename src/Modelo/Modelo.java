@@ -1202,4 +1202,56 @@ public class Modelo {
 	    }
 	    return false;
 	}
+	
+	public int obtenerPuestoMundial(String usuario) {
+	    int puesto = 0;
+	    // Contamos cuántos usuarios tienen más puntos que el usuario actual
+	    String sql = "SELECT COUNT(*) + 1 AS puesto FROM USERS WHERE puntos > (SELECT puntos FROM USERS WHERE USR = ?)";
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setString(1, usuario);
+	        ResultSet rs = ps.executeQuery();
+	        if (rs.next()) {
+	            puesto = rs.getInt("puesto");
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	    return puesto;
+	}
+	
+	public String getUsuarioActual() {
+	    return this.usuarioLogueado;
+	}
+
+	public int obtenerPuestoSemanal(String usuario) {
+	    int puesto = 1;
+	    // Esta consulta calcula la suma de puntos semanales de todos y cuenta cuántos 
+	    // tienen más que el usuario indicado.
+	    String sql = "SELECT COUNT(*) + 1 AS puesto FROM (" +
+	                 "  SELECT nombreUsuario, SUM(A.puntos) as total " +
+	                 "  FROM COMPLETAR_ACTIVIDAD CA " +
+	                 "  JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad " +
+	                 "  WHERE YEARWEEK(CA.fecha_realizacion, 1) = YEARWEEK(CURRENT_DATE(), 1) " +
+	                 "  GROUP BY nombreUsuario" +
+	                 ") AS ranking_semanal " +
+	                 "WHERE total > ( " +
+	                 "  SELECT SUM(A2.puntos) " +
+	                 "  FROM COMPLETAR_ACTIVIDAD CA2 " +
+	                 "  JOIN ACTIVIDADES A2 ON CA2.id_actividad = A2.id_actividad " +
+	                 "  WHERE CA2.nombreUsuario = ? " +
+	                 "  AND YEARWEEK(CA2.fecha_realizacion, 1) = YEARWEEK(CURRENT_DATE(), 1)" +
+	                 ")";
+	                 
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setString(1, usuario);
+	        ResultSet rs = ps.executeQuery();
+	        if (rs.next()) {
+	            puesto = rs.getInt("puesto");
+	        }
+	    } catch (SQLException e) {
+	        // Si el usuario no ha hecho actividades esta semana, la subconsulta devuelve null
+	        return 0; 
+	    }
+	    return puesto;
+	}
 }

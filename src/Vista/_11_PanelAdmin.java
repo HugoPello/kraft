@@ -30,6 +30,7 @@ import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 
 import Controlador.Controlador;
@@ -220,6 +221,7 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 		tabbedPane.addTab("Gestión Usuarios", null, panelGestion, null);
 		panelGestion.setBackground(GRIS_RECTANGULO);
 		panelGestion.setLayout(null);
+		
 
 		JScrollPane scrollPane_1 = new JScrollPane();
 		scrollPane_1.setBounds(116, 70, 361, 144);
@@ -232,6 +234,7 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 			}
 		});
 
+		
 		tablaGestion = new JTable();
 		tablaGestion.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
@@ -251,6 +254,20 @@ public class _11_PanelAdmin extends JFrame implements Vista {
 		tablaGestion.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tablaGestion.setModel(modelo);
 		scrollPane_1.setViewportView(tablaGestion);
+		tablaGestion.setBackground(GRIS_FONDO);
+		tablaGestion.setForeground(NARANJA);
+		tablaGestion.setGridColor(Color.DARK_GRAY);
+		tablaGestion.setSelectionBackground(NARANJA); // Color al hacer clic en una fila
+		tablaGestion.setSelectionForeground(Color.BLACK);
+
+		// Estilo del contenedor (ScrollPane) para evitar el fondo gris claro
+		scrollPane_1.getViewport().setBackground(GRIS_FONDO);
+		scrollPane_1.setBorder(new LineBorder(Color.DARK_GRAY));
+
+		// Estilo del encabezado (Header)
+		tablaGestion.getTableHeader().setBackground(new Color(15, 15, 15));
+		tablaGestion.getTableHeader().setForeground(Color.WHITE);
+		tablaGestion.getTableHeader().setFont(new Font("Tahoma", Font.BOLD, 12));
 
 		JLabel lblUsuarios = new JLabel("Usuarios");
 		lblUsuarios.setFont(new Font("Tahoma", Font.PLAIN, 50));
