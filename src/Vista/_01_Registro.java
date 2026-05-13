@@ -1,10 +1,35 @@
 //@autor: Hugo/ Carlos
 package Vista;
 
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.border.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JProgressBar;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 import Controlador.Controlador;
 import Modelo.Modelo;
@@ -29,6 +54,9 @@ public class _01_Registro extends JFrame implements Vista {
     private JComboBox<String> comboSeguridad;
     private JRadioButton rdbtnAdmin;
     private JButton btnRegistrar;
+    private JTextField txtEmail;
+    private String captchaGenerado;
+
 
     public _01_Registro() {
         setUndecorated(true);
@@ -90,6 +118,14 @@ public class _01_Registro extends JFrame implements Vista {
         txtNombre = new JTextField();
         txtNombre.addKeyListener(new KeyAdapter() {
         	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
+        	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();
         	}
@@ -101,18 +137,26 @@ public class _01_Registro extends JFrame implements Vista {
         panelFormulario.add(txtNombre);
         
         JProgressBar progressBar = new JProgressBar();
-        progressBar.setBounds(362, 176, 145, 13);
+        progressBar.setBounds(362, 222, 145, 13);
         panelFormulario.add(progressBar);
 
         // 2. CONTRASEÑA
         JLabel lblPass = new JLabel("Contraseña:");
         lblPass.setForeground(Color.WHITE);
         lblPass.setFont(new Font("Arial", Font.BOLD, 16));
-        lblPass.setBounds(50, 130, 120, 30);
+        lblPass.setBounds(50, 176, 120, 30);
         panelFormulario.add(lblPass);
 
         txtPass = new JPasswordField();
         txtPass.addKeyListener(new KeyAdapter() {
+        	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
         	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();
@@ -121,8 +165,16 @@ public class _01_Registro extends JFrame implements Vista {
         txtPass.setBackground(GRIS_RECTANGULO);
         txtPass.setForeground(Color.WHITE);
         txtPass.setCaretColor(Color.WHITE);
-        txtPass.setBounds(200, 130, 330, 35);
+        txtPass.setBounds(200, 176, 330, 35);
         txtPass.addKeyListener(new KeyAdapter() {
+        	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
             @Override
             public void keyReleased(KeyEvent e) {
                 // Obtenemos la longitud de la contraseña actual
@@ -158,14 +210,14 @@ public class _01_Registro extends JFrame implements Vista {
         JLabel lblRepetir = new JLabel("Repetir:");
         lblRepetir.setForeground(Color.WHITE);
         lblRepetir.setFont(new Font("Arial", Font.BOLD, 16));
-        lblRepetir.setBounds(50, 199, 150, 30);
+        lblRepetir.setBounds(50, 245, 150, 30);
         panelFormulario.add(lblRepetir);
 
         passwordFieldRepetir = new JPasswordField();
         passwordFieldRepetir.setBackground(GRIS_RECTANGULO);
         passwordFieldRepetir.setForeground(Color.WHITE);
         passwordFieldRepetir.setCaretColor(Color.WHITE);
-        passwordFieldRepetir.setBounds(200, 199, 330, 35);
+        passwordFieldRepetir.setBounds(200, 245, 330, 35);
         panelFormulario.add(passwordFieldRepetir);
 
         // 4. PREGUNTA SEGURIDAD
@@ -173,24 +225,32 @@ public class _01_Registro extends JFrame implements Vista {
         JLabel lblSeguridad = new JLabel("Pregunta:");
         lblSeguridad.setForeground(Color.WHITE);
         lblSeguridad.setFont(new Font("Arial", Font.BOLD, 16));
-        lblSeguridad.setBounds(50, 249, 120, 30);
+        lblSeguridad.setBounds(50, 295, 120, 30);
         panelFormulario.add(lblSeguridad);
 
         comboSeguridad = new JComboBox<String>();
         comboSeguridad.setBackground(GRIS_RECTANGULO);
         comboSeguridad.setForeground(Color.WHITE);
-        comboSeguridad.setBounds(200, 249, 330, 35);
+        comboSeguridad.setBounds(200, 295, 330, 35);
         panelFormulario.add(comboSeguridad);
         
         // 5. RESPUESTA SEGURIDAD
         JLabel lblRespuesta = new JLabel("Respuesta:");
         lblRespuesta.setForeground(Color.WHITE);
         lblRespuesta.setFont(new Font("Arial", Font.BOLD, 16));
-        lblRespuesta.setBounds(50, 299, 120, 30);
+        lblRespuesta.setBounds(50, 345, 120, 30);
         panelFormulario.add(lblRespuesta);
 
         txtRespuestaSeguridad = new JTextField();
         txtRespuestaSeguridad.addKeyListener(new KeyAdapter() {
+        	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
         	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();
@@ -199,14 +259,14 @@ public class _01_Registro extends JFrame implements Vista {
         txtRespuestaSeguridad.setBackground(GRIS_RECTANGULO);
         txtRespuestaSeguridad.setForeground(new Color(255, 255, 255));
         txtRespuestaSeguridad.setCaretColor(Color.WHITE);
-        txtRespuestaSeguridad.setBounds(200, 299, 330, 35);
+        txtRespuestaSeguridad.setBounds(200, 345, 330, 35);
         panelFormulario.add(txtRespuestaSeguridad);
 
         // 6. FECHA NACIMIENTO (Formato: YYYY-MM-DD)
         JLabel lblFecha = new JLabel("Fecha Nac:");
         lblFecha.setForeground(Color.WHITE);
         lblFecha.setFont(new Font("Arial", Font.BOLD, 16));
-        lblFecha.setBounds(50, 349, 120, 30);
+        lblFecha.setBounds(50, 395, 120, 30);
         panelFormulario.add(lblFecha);
 
         txtFecha = new JTextField();
@@ -219,6 +279,14 @@ public class _01_Registro extends JFrame implements Vista {
         });
         txtFecha.addKeyListener(new KeyAdapter() {
         	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
+        	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();
         	}
@@ -228,19 +296,40 @@ public class _01_Registro extends JFrame implements Vista {
         txtFecha.setBackground(GRIS_RECTANGULO);
         txtFecha.setForeground(new Color(128, 128, 128));
         txtFecha.setCaretColor(Color.WHITE);
-        txtFecha.setBounds(200, 349, 330, 35);
+        txtFecha.setBounds(200, 395, 330, 35);
         panelFormulario.add(txtFecha);
 
         // 7. CAPTCHA
-        JLabel lblCaptchaText = new JLabel("W6R2Q", JLabel.CENTER);
+        JLabel lblCaptchaText = new JLabel("", JLabel.CENTER); // Empezamos vacío
         lblCaptchaText.setOpaque(true);
         lblCaptchaText.setBackground(Color.LIGHT_GRAY);
         lblCaptchaText.setFont(new Font("Monospaced", Font.ITALIC | Font.BOLD, 20));
-        lblCaptchaText.setBounds(50, 399, 120, 35);
+        lblCaptchaText.setBounds(50, 445, 120, 35);
         panelFormulario.add(lblCaptchaText);
+
+        // Generar el primer captcha al iniciar
+        captchaGenerado = generarTextoCaptcha();
+        lblCaptchaText.setText(captchaGenerado);
+
+        // OPCIONAL: Añade un MouseListener al lblCaptchaText para que cambie si el usuario hace clic (por si no se lee bien)
+        lblCaptchaText.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                captchaGenerado = generarTextoCaptcha();
+                lblCaptchaText.setText(captchaGenerado);
+            }
+        });
 
         txtCaptchaInput = new JTextField();
         txtCaptchaInput.addKeyListener(new KeyAdapter() {
+        	@Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (btnRegistrar.isEnabled()) {
+                        miControlador.registrarUsuario();
+                    }
+                }
+            }
         	@Override
         	public void keyReleased(KeyEvent e) {
         		actualizarBoton();
@@ -249,7 +338,7 @@ public class _01_Registro extends JFrame implements Vista {
         txtCaptchaInput.setBackground(GRIS_RECTANGULO);
         txtCaptchaInput.setForeground(new Color(255, 255, 255));
         txtCaptchaInput.setCaretColor(Color.WHITE);
-        txtCaptchaInput.setBounds(200, 399, 330, 35);
+        txtCaptchaInput.setBounds(200, 445, 330, 35);
         panelFormulario.add(txtCaptchaInput);
 
         // 8. MODO ADMIN
@@ -257,13 +346,13 @@ public class _01_Registro extends JFrame implements Vista {
         rdbtnAdmin.setForeground(NARANJA);
         rdbtnAdmin.setBackground(GRIS_FONDO);
         rdbtnAdmin.setFocusPainted(false);
-        rdbtnAdmin.setBounds(200, 449, 250, 30);
+        rdbtnAdmin.setBounds(200, 495, 250, 30);
         panelFormulario.add(rdbtnAdmin);
 
         JLabel lblAdminPass = new JLabel("Contraseña Admin:");
         lblAdminPass.setForeground(Color.CYAN);
         lblAdminPass.setFont(new Font("Arial", Font.BOLD, 14));
-        lblAdminPass.setBounds(50, 489, 150, 30);
+        lblAdminPass.setBounds(50, 535, 150, 30);
         lblAdminPass.setVisible(false);
         panelFormulario.add(lblAdminPass);
 
@@ -271,7 +360,7 @@ public class _01_Registro extends JFrame implements Vista {
         txtAdminPass.setBackground(GRIS_RECTANGULO);
         txtAdminPass.setForeground(Color.WHITE);
         txtAdminPass.setCaretColor(Color.WHITE);
-        txtAdminPass.setBounds(200, 489, 330, 35);
+        txtAdminPass.setBounds(200, 535, 330, 35);
         txtAdminPass.setVisible(false);
         panelFormulario.add(txtAdminPass);
 
@@ -288,7 +377,7 @@ public class _01_Registro extends JFrame implements Vista {
         	if(miControlador != null) miControlador.cambiarVentana(1, 0);
         });
         estilizarBotonAccion(btnLogin, GRIS_RECTANGULO, Color.WHITE);
-        btnLogin.setBounds(100, 550, 180, 45);
+        btnLogin.setBounds(104, 593, 180, 45);
         panelFormulario.add(btnLogin);
 
         btnRegistrar = new JButton("REGISTRAR");
@@ -297,15 +386,38 @@ public class _01_Registro extends JFrame implements Vista {
         	if(miControlador != null) miControlador.registrarUsuario();
         });
         estilizarBotonAccion(btnRegistrar, NARANJA, Color.BLACK);
-        btnRegistrar.setBounds(320, 550, 180, 45);
+        btnRegistrar.setBounds(327, 595, 180, 45);
         panelFormulario.add(btnRegistrar);
         
         
         JLabel lblSeguridadPass = new JLabel("Seguridad:");
         lblSeguridadPass.setFont(new Font("Tahoma", Font.PLAIN, 15));
         lblSeguridadPass.setForeground(new Color(255, 255, 255));
-        lblSeguridadPass.setBounds(282, 175, 130, 14);
+        lblSeguridadPass.setBounds(282, 221, 130, 14);
         panelFormulario.add(lblSeguridadPass);
+        
+        JLabel lblEmail = new JLabel("E-mail");
+        lblEmail.setForeground(Color.WHITE);
+        lblEmail.setFont(new Font("Arial", Font.BOLD, 16));
+        lblEmail.setBounds(50, 125, 100, 30);
+        panelFormulario.add(lblEmail);
+        
+        txtEmail = new JTextField();
+        txtEmail.setForeground(Color.WHITE);
+        txtEmail.setCaretColor(Color.WHITE);
+        txtEmail.setBackground(new Color(40, 40, 40));
+        txtEmail.setBounds(200, 125, 330, 35);
+        panelFormulario.add(txtEmail);
+        
+        JLabel lblNuevoCaptcha = new JLabel("Click para generar");
+        lblNuevoCaptcha.setBounds(50, 485, 150, 22);
+        panelFormulario.add(lblNuevoCaptcha);
+        lblNuevoCaptcha.setForeground(NARANJA);
+        
+        JLabel lblUnoNuevo = new JLabel("uno nuevo");
+        lblUnoNuevo.setForeground(new Color(255, 128, 0));
+        lblUnoNuevo.setBounds(50, 504, 150, 22);
+        panelFormulario.add(lblUnoNuevo);
         
         this.addWindowListener(new WindowAdapter() {
             @Override
@@ -415,4 +527,36 @@ public class _01_Registro extends JFrame implements Vista {
 			btnRegistrar.setEnabled(false);
 		}
 	}
+    
+    public String getTxtEmail() {
+        return txtEmail.getText();
+    }
+
+    public String getTxtCaptcha() {
+        return txtCaptchaInput.getText();
+    }
+
+    public String getCaptchaGenerado() {
+        return captchaGenerado;
+    }
+    
+    /**
+     * Genera una cadena alfanumérica aleatoria para el sistema de seguridad Captcha.
+     * Utiliza un conjunto predefinido de caracteres (A-Z, 0-9) para asegurar 
+     * la legibilidad y evitar ambigüedades visuales.
+     * 
+     * @author Hugo
+     * @return Una cadena de 5 caracteres aleatorios.
+     */
+    private String generarTextoCaptcha() {
+    	// Definimos el conjunto de caracteres permitidos (alfanuméricos)
+        String caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 5; i++) {
+            int index = (int) (Math.random() * caracteres.length());
+            sb.append(caracteres.charAt(index));
+        }
+     // Devolvemos el token generado para su posterior validación
+        return sb.toString();
+    }
 }

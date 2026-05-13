@@ -1,10 +1,24 @@
 //@Autor : Ivan / Carloss
 package Vista;
 
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.border.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.border.EmptyBorder;
 
 import Controlador.Controlador;
 import Modelo.Modelo;
@@ -136,6 +150,23 @@ public class _09_OlvidoContraseña extends JFrame implements Vista {
 		panelCentral.add(lblUsu);
 
 		txtUsu = new JTextField();
+		txtUsu.addFocusListener(new java.awt.event.FocusAdapter() {
+		    @Override
+		    public void focusLost(java.awt.event.FocusEvent e) {
+		        String usuario = txtUsu.getText().trim();
+		        if (!usuario.isEmpty() && miControlador != null) {
+		            String preguntaEncontrada = miControlador.recuperarPreguntaUsuario(usuario);
+		            
+		            if (preguntaEncontrada != null) {
+		                // Cambiamos el modelo del combo para que SOLO aparezca esa pregunta
+		                cbxPregunta.setModel(new DefaultComboBoxModel<>(new String[] { preguntaEncontrada }));
+		            } else {
+		                // Si el usuario no existe, volvemos al estado inicial
+		                cbxPregunta.setModel(new DefaultComboBoxModel<>(new String[] { "--Usuario no encontrado--" }));
+		            }
+		        }
+		    }
+		});
 		txtUsu.setBounds(799, 233, 250, 25);
 		panelCentral.add(txtUsu);
 
@@ -270,6 +301,10 @@ public class _09_OlvidoContraseña extends JFrame implements Vista {
 		txtNuevaPass.setText("");
 		txtConfirmPass.setText("");
 		cbxPregunta.setSelectedIndex(0);
+	}
+	
+	public String getPreguntaSeleccionada() {
+	    return (String) cbxPregunta.getSelectedItem();
 	}
 
 	@Override

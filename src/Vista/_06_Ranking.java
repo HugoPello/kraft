@@ -1,10 +1,25 @@
 //@autor: Ivan / Carloss
 package Vista;
 
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.border.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 
 import Controlador.Controlador;
@@ -33,6 +48,9 @@ public class _06_Ranking extends JFrame implements Vista {
 
 	private Controlador miControlador;
 	private Modelo miModelo;
+	private JLabel lblTuPuestoEs_Izq;
+	private JLabel lblTuPuestoEs;
+	private JLabel lblTuPuestoEs_Der;
 
 	public _06_Ranking() {
 		// --- 1. CONFIGURACIÓN BÁSICA DE LA VENTANA ---
@@ -142,8 +160,10 @@ public class _06_Ranking extends JFrame implements Vista {
 		panelCentral.add(scrollPane2);
 		table_2 = new JTable(crearModeloEjemplo());
 		scrollPane2.setViewportView(table_2);
+		table_2.setBackground(GRIS_RECTANGULO);
+		table_2.setForeground(NARANJA);
 
-		JLabel lblTuPuestoEs = new JLabel("Tu Puesto es: 50");
+		lblTuPuestoEs = new JLabel("Tu Puesto es: 50");
 		lblTuPuestoEs.setForeground(Color.WHITE);
 		lblTuPuestoEs.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		lblTuPuestoEs.setBounds(682, 580, 146, 35);
@@ -162,8 +182,10 @@ public class _06_Ranking extends JFrame implements Vista {
 		panelCentral.add(scrollPane1);
 		table = new JTable(crearModeloEjemplo());
 		scrollPane1.setViewportView(table);
-
-		JLabel lblTuPuestoEs_Izq = new JLabel("Tu Puesto es: 1500");
+		table.setBackground(GRIS_RECTANGULO);
+		table.setForeground(NARANJA);
+		
+		lblTuPuestoEs_Izq = new JLabel("Tu Puesto es: 1500");
 		lblTuPuestoEs_Izq.setForeground(Color.WHITE);
 		lblTuPuestoEs_Izq.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		lblTuPuestoEs_Izq.setBounds(235, 580, 146, 35);
@@ -190,8 +212,10 @@ public class _06_Ranking extends JFrame implements Vista {
 		panelCentral.add(scrollPane3);
 		table_1 = new JTable(new DefaultTableModel(new Object[][] {}, new String[] { "USUARIO", "PUNTOS" }));
 		scrollPane3.setViewportView(table_1);
+		table_1.setBackground(GRIS_RECTANGULO);
+		table_1.setForeground(NARANJA);
 
-		JLabel lblTuPuestoEs_Der = new JLabel("Tu Puesto es: 10");
+		lblTuPuestoEs_Der = new JLabel("Tu Puesto es: 10");
 		lblTuPuestoEs_Der.setForeground(Color.WHITE);
 		lblTuPuestoEs_Der.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		lblTuPuestoEs_Der.setBounds(1123, 580, 146, 35);
@@ -204,6 +228,7 @@ public class _06_Ranking extends JFrame implements Vista {
 	            if (miControlador != null) {
 	                try {
 	                    String[] columnas = { "USUARIO", "PUNTOS" };
+	                    String user = miControlador.getUsuarioLogueado();
 
 	                    // 1. Tabla Mundial 
 	                    Object[][] datosMundial = miControlador.getRankingMundial();
@@ -216,6 +241,18 @@ public class _06_Ranking extends JFrame implements Vista {
 	                    // 3. Desplegable de Grupos
 	                    String[] misGrupos = miControlador.getMisGrupos();
 	                    cbxGrupos.setModel(new javax.swing.DefaultComboBoxModel<>(misGrupos));
+	                    
+	                    // Actualizar Label Mundial
+	                    int pMundial = miControlador.getMiPuestoMundial(user);
+	                    lblTuPuestoEs_Izq.setText("Tu Puesto es: " + (pMundial > 0 ? pMundial : "---"));
+
+	                    // Actualizar Label Semanal
+	                    int pSemanal = miControlador.getMiPuestoSemanal(user);
+	                    if (pSemanal > 0) {
+	                        lblTuPuestoEs.setText("Tu Puesto es: " + pSemanal);
+	                    } else {
+	                        lblTuPuestoEs.setText("Sin actividad esta semana");
+	                    }
 	                    
 	                    // 4. Tabla Grupal
 	                    if (misGrupos.length > 0 && !misGrupos[0].equals("No hay datos")) {

@@ -1,10 +1,28 @@
 package Vista;
 
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.border.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+
+import javax.swing.BorderFactory;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
+
 import Controlador.Controlador;
 import Modelo.Modelo;
 
@@ -36,7 +54,7 @@ public class _16_Grupos extends JFrame implements Vista {
 		header.setBackground(new Color(15, 15, 15));
 		header.setPreferredSize(new Dimension(0, 70));
 
-		JLabel lblTitulo = new JLabel("  KRAFT - SEDE DEL CLAN");
+		JLabel lblTitulo = new JLabel("  KRAFT");
 		lblTitulo.setForeground(NARANJA);
 		lblTitulo.setFont(new Font("Arial Black", Font.BOLD, 24));
 		header.add(lblTitulo, BorderLayout.WEST);
@@ -100,15 +118,25 @@ public class _16_Grupos extends JFrame implements Vista {
 
 		tablaMiembros = new JTable();
 		JScrollPane scrollMiembros = new JScrollPane(tablaMiembros);
-		scrollMiembros.setBorder(BorderFactory.createTitledBorder(new LineBorder(Color.GRAY), "MIEMBROS DEL CLAN", 0, 0,
-				new Font("Arial", Font.BOLD, 14), Color.WHITE));
+		scrollMiembros.setBorder(BorderFactory.createTitledBorder(new LineBorder(NARANJA), "MIEMBROS DEL GRUPO", 0, 0,
+				new Font("Arial", Font.BOLD, 14), GRIS_FONDO));
 		panelTablas.add(scrollMiembros);
+		tablaMiembros.setBackground(GRIS_RECTANGULO);
+		tablaMiembros.setForeground(NARANJA);
+		scrollMiembros.getViewport().setBackground(GRIS_RECTANGULO); 
+		tablaMiembros.getTableHeader().setBackground(new Color(15, 15, 15));
+		tablaMiembros.getTableHeader().setForeground(GRIS_FONDO);
 
 		tablaActividades = new JTable();
 		JScrollPane scrollActividades = new JScrollPane(tablaActividades);
-		scrollActividades.setBorder(BorderFactory.createTitledBorder(new LineBorder(Color.GRAY), "ÚLTIMAS ACTIVIDADES",
-				0, 0, new Font("Arial", Font.BOLD, 14), Color.WHITE));
+		scrollActividades.setBorder(BorderFactory.createTitledBorder(new LineBorder(NARANJA), "ÚLTIMAS ACTIVIDADES",
+				0, 0, new Font("Arial", Font.BOLD, 14), GRIS_FONDO));
 		panelTablas.add(scrollActividades);
+		tablaActividades.setBackground(GRIS_RECTANGULO);
+		tablaActividades.setForeground(NARANJA);
+		scrollActividades.getViewport().setBackground(GRIS_RECTANGULO);
+		tablaActividades.getTableHeader().setBackground(new Color(15, 15, 15));
+		tablaActividades.getTableHeader().setForeground(GRIS_FONDO);
 
 		panelPrincipal.add(panelTablas, BorderLayout.CENTER);
 

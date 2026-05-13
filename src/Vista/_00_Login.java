@@ -1,10 +1,34 @@
-//@autor: Ivan// Carlos
+/**
+ * Interfaz gráfica de acceso al sistema (Login).
+ * Esta clase gestiona la entrada de credenciales del usuario, la validación
+ * visual de campos obligatorios y la comunicación inicial con el controlador
+ * para el inicio de sesión y la configuración de la base de datos.
+ * 
+ * @author Ivan, Carlos
+ * @version 1.0
+ */
 package Vista;
 
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.border.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 import Controlador.Controlador;
 import Modelo.Modelo;
@@ -92,6 +116,14 @@ public class _00_Login extends JFrame implements Vista {
 		txtUsu = new JTextField();
 		txtUsu.addKeyListener(new KeyAdapter() {
 			@Override
+			public void keyPressed(KeyEvent e) {
+				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+					if (btnInicio.isEnabled()) {
+						miControlador.login();
+					}
+				}
+			}
+			@Override
 			public void keyReleased(KeyEvent e) {
 				actualizarBoton();
 			}
@@ -107,6 +139,14 @@ public class _00_Login extends JFrame implements Vista {
 
 		txtPwd = new JPasswordField();
 		txtPwd.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+					if (btnInicio.isEnabled()) {
+						miControlador.login();
+					}
+				}
+			}
 			@Override
 			public void keyReleased(KeyEvent e) {
 				actualizarBoton();
@@ -182,10 +222,19 @@ public class _00_Login extends JFrame implements Vista {
 		return txtUsu.getText();
 	}
 
+	/**
+     * Captura la contraseña introducida de forma segura.
+     * @return String convertido desde el array de caracteres de JPasswordField.
+     */
 	public String getTxtPwd() {
 		return String.valueOf(txtPwd.getPassword());
 	}
-
+	
+	/**
+     * Gestiona la respuesta visual tras un intento de autenticación.
+     * Dependiendo del resultado procesado por el modelo, redirige al usuario
+     * a la pantalla de inicio o muestra un mensaje de error en la interfaz.
+     */
 	public void login() {
 		String resultado = miModelo.getResultado();
 		if (resultado.equals("Correcto")) {
@@ -206,6 +255,11 @@ public class _00_Login extends JFrame implements Vista {
 		lblRespuesta.setText("");
 	}
 
+	/**
+     * Actualiza el estado de habilitación del botón de inicio de sesión.
+     * Implementa una lógica de validación en tiempo real que comprueba que los campos
+     * de usuario y contraseña no estén vacíos ni contengan únicamente espacios.
+     */
 	public void actualizarBoton() {
 		String user = txtUsu.getText();
 		String pass = String.valueOf(txtPwd.getPassword());

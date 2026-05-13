@@ -1,8 +1,16 @@
 package Vista;
 
+import java.awt.Color;
 import java.awt.Font;
-import java.awt.event.*;
-import javax.swing.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JTextField;
+
 import Controlador.Controlador;
 import Modelo.Modelo;
 
@@ -13,6 +21,10 @@ public class _15_Configuracion extends JFrame implements Vista {
 	private JTextField txtUsuario;
 	private JTextField txtPwd;
 	private JTextField txtUrl;
+	
+	private final Color NARANJA = new Color(255, 128, 0);
+    private final Color GRIS_FONDO = new Color(25, 25, 25);
+    private final Color GRIS_RECTANGULO = new Color(40, 40, 40);
 
 	public _15_Configuracion() {
 		setTitle("Configuracion");
@@ -22,11 +34,14 @@ public class _15_Configuracion extends JFrame implements Vista {
 		setResizable(false);
 		setLocationRelativeTo(null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		getContentPane().setBackground(GRIS_RECTANGULO);
+		((javax.swing.JPanel)getContentPane()).setBorder(new javax.swing.border.LineBorder(NARANJA, 2));
 
 		JLabel lblUsuario = new JLabel("Usuario:");
 		lblUsuario.setFont(new Font("Tahoma", Font.PLAIN, 12));
 		lblUsuario.setBounds(53, 59, 71, 12);
 		getContentPane().add(lblUsuario);
+		lblUsuario.setForeground(NARANJA);
 
 		txtUsuario = new JTextField();
 		txtUsuario.setBounds(134, 57, 205, 20);
@@ -36,6 +51,7 @@ public class _15_Configuracion extends JFrame implements Vista {
 		lblPwd.setFont(new Font("Tahoma", Font.PLAIN, 12));
 		lblPwd.setBounds(53, 109, 117, 12);
 		getContentPane().add(lblPwd);
+		lblPwd.setForeground(NARANJA);
 
 		txtPwd = new JTextField();
 		txtPwd.setBounds(134, 107, 205, 20);
@@ -44,6 +60,7 @@ public class _15_Configuracion extends JFrame implements Vista {
 		JLabel lblUrl = new JLabel("URL:");
 		lblUrl.setBounds(53, 155, 97, 12);
 		getContentPane().add(lblUrl);
+		lblUrl.setForeground(NARANJA);
 
 		txtUrl = new JTextField();
 		txtUrl.setBounds(134, 152, 205, 20);
@@ -56,11 +73,15 @@ public class _15_Configuracion extends JFrame implements Vista {
 				miControlador.guardarConfiguracionAjustes();
 		});
 		getContentPane().add(btnModificar);
+		btnModificar.setBackground(GRIS_FONDO);
+		btnModificar.setForeground(NARANJA);
 
 		JButton btnSalir = new JButton("Salir");
 		btnSalir.setBounds(342, 233, 84, 20);
 		btnSalir.addActionListener(e -> dispose());
 		getContentPane().add(btnSalir);
+		btnSalir.setBackground(GRIS_FONDO);
+		btnSalir.setForeground(NARANJA);
 
 		this.addWindowListener(new WindowAdapter() {
 			@Override
