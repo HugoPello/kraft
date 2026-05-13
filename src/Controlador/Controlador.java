@@ -1,11 +1,3 @@
-/**
- * Clase controladora que actúa como intermediaria entre la Vista y el Modelo.
- * Gestiona los eventos de usuario, la navegación entre ventanas y la invocación
- * de servicios de mensajería externa.
- * 
- * @author Hugo
- */
-
 package Controlador;
 
 import java.awt.Image;
@@ -14,7 +6,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.sql.SQLException;
 import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
@@ -31,6 +22,7 @@ import Vista._01_Registro;
 import Vista._02_Inicio;
 import Vista._04_DentroActividad;
 import Vista._05_Logros;
+import Vista._07_Tienda;
 import Vista._08_PerfilUsuario;
 import Vista._09_OlvidoContraseña;
 import Vista._10_CrearEventoAdmin;
@@ -41,13 +33,19 @@ import Vista._15_Configuracion;
 import Vista._16_Grupos;
 import Vista._17_CrearGrupo;
 
+/**
+ * Clase controladora que actúa como intermediaria entre la Vista y el Modelo.
+ * * @author Hugo / Carlos / Diego
+ * 
+ * @version 2.0 (Código Refactorizado y Ordenado)
+ */
 public class Controlador {
 
 	private Modelo miModelo;
 	private Vista[] misVistas;
 
 	// =========================================================================
-	// 1. CONFIGURACIÓN INICIAL
+	// 1. CONFIGURACIÓN Y NAVEGACIÓN
 	// =========================================================================
 
 	public void setVista(Vista[] misVistas) {
@@ -58,692 +56,24 @@ public class Controlador {
 		this.miModelo = miModelo;
 	}
 
-	// =========================================================================
-	// 2. NAVEGACIÓN Y CONTROL DE VENTANAS
-	// =========================================================================
-
 	public void cambiarVentana(int desde, int hasta) {
-	    if (hasta == 11 && !miModelo.esUsuarioAdmin()) {
-	        javax.swing.JOptionPane.showMessageDialog(null, "Acceso denegado: Se requieren permisos de administrador.",
-	                "Seguridad del Sistema", javax.swing.JOptionPane.ERROR_MESSAGE);
-	        return;
-	    }
-	    
-	    // ¡NUEVO! Refresco forzado y seguro antes de abrir la pestaña de Logros
-	    if (hasta == 5 && misVistas[5] instanceof _05_Logros) {
-	        ((_05_Logros) misVistas[5]).cargarDatosLogros();
-	    }
-	    
-	    ((JFrame) misVistas[desde]).setVisible(false);
-	    ((JFrame) misVistas[hasta]).setVisible(true);
+		if (hasta == 11 && !miModelo.esUsuarioAdmin()) {
+			JOptionPane.showMessageDialog(null, "Acceso denegado: Se requieren permisos de administrador.", "Seguridad",
+					JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+
+		// Refresco automático de vistas conflictivas
+		if (hasta == 5 && misVistas[5] instanceof _05_Logros) {
+			((_05_Logros) misVistas[5]).cargarDatosLogros();
+		}
+
+		((JFrame) misVistas[desde]).setVisible(false);
+		((JFrame) misVistas[hasta]).setVisible(true);
 	}
 
 	public void abrirConfiguracionPopUp() {
-		// Solo hacemos visible la de configuración, sin ocultar la anterior
 		((Window) misVistas[16]).setVisible(true);
-	}
-
-	public void irARegistro() {
-		// Intentamos conectar usando los datos actuales del .ini
-		if (miModelo.conectarBD()) {
-			// Si la conexión es exitosa, cambiamos de ventana
-			this.cambiarVentana(0, 1);
-		} else {
-			// Si falla, avisamos en la propia pantalla de Login
-			((_00_Login) misVistas[0]).mostrarError("Error: No se pudo conectar a la BD.");
-		}
-	}
-
-	// =========================================================================
-	// 3. GESTIÓN DE USUARIOS Y SESIÓN
-	// =========================================================================
-
-	public void login() {
-		_00_Login vista = (_00_Login) misVistas[0];
-
-		if (!miModelo.conectarBD()) {
-			vista.mostrarError("Error de conexión con la base de datos.");
-			return;
-		}
-
-		String usr = vista.getTxtUsu();
-		String pwd = vista.getTxtPwd();
-
-		String resultado = miModelo.loginSeguro(usr, pwd);
-
-		switch (resultado) {
-		case "OTP_ENVIADO":
-			// Flujo de seguridad 2FA
-			String otp = miModelo.obtenerUltimoOTP(usr);
-			String email = miModelo.sacarEmail();
-			new Servicios.Email().enviarCorreoOTP(email, otp);
-
-			cambiarVentana(0, 18); // Ir a Verificación OTP
-			break;
-
-		case "LOGIN_DIRECTO":
-			// Flujo para cuentas antiguas sin 2FA
-			if (miModelo.isAdmin()) {
-				cambiarVentana(0, 11);
-			} else {
-				cambiarVentana(0, 2);
-			}
-			break;
-
-		case "INCORRECTO":
-			vista.mostrarError("Usuario o contraseña incorrectos");
-			break;
-
-		case "CERRAR":
-			// Mensaje de despedida por seguridad y cierre total
-			javax.swing.JOptionPane.showMessageDialog(null, "Demasiados intentos fallidos. El sistema se cerrará.",
-					"Bloqueo de Seguridad", javax.swing.JOptionPane.ERROR_MESSAGE);
-			System.exit(0); // Cierre físico del programa
-			break;
-
-		default:
-			vista.mostrarError("Error crítico en el sistema.");
-			break;
-		}
-	}
-
-	/**
-	 * Gestiona el flujo de registro: Validación de entrada, Captcha, Inserción en
-	 * BD y disparo del servicio de mensajería OTP.
-	 */
-	public void registrarUsuario() {
-		_01_Registro vistaReg = (_01_Registro) misVistas[1];
-
-		// 1. Extraer todos los datos de la vista
-		String usr = vistaReg.getTxtNombre();
-		String emailDestino = vistaReg.getTxtEmail();
-		String pwd = vistaReg.getTxtPass();
-		String pwdRepetir = vistaReg.getPasswordFieldRepetir();
-		String fecha = vistaReg.getTxtFechaNac();
-		int idPregunta = vistaReg.getIndicePregunta();
-		String respuesta = vistaReg.getTxtRespuesta();
-		boolean esAdmin = vistaReg.isModoAdmin();
-		String adminPass = vistaReg.getPassAdmin();
-
-		// Datos del Captcha
-		String captchaUsuario = vistaReg.getTxtCaptcha();
-		String captchaReal = vistaReg.getCaptchaGenerado();
-
-		// 2. Validaciones de campos obligatorios
-		if (usr.trim().isEmpty() || pwd.isEmpty() || respuesta.trim().isEmpty() || emailDestino.trim().isEmpty()) {
-			vistaReg.mostrarMensaje("Error: Nombre, Email, Contraseña y Respuesta son obligatorios.");
-			return;
-		}
-
-		// 3. Validación de Captcha (Añadido)
-		if (!captchaUsuario.equalsIgnoreCase(captchaReal)) {
-			vistaReg.mostrarMensaje("Error: El código Captcha no coincide.");
-			return;
-		}
-
-		// 4. Validación de coincidencia de contraseñas [Tu código original]
-		if (!pwd.equals(pwdRepetir)) {
-			vistaReg.mostrarMensaje("Error: Las contraseñas no coinciden.");
-			return;
-		}
-
-		// 5. Validación de formato de fecha [Tu código original]
-		if (!fecha.isEmpty()) {
-			try {
-				java.sql.Date.valueOf(fecha);
-			} catch (Exception e) {
-				vistaReg.mostrarMensaje("Error: El formato de la fecha debe ser YYYY-MM-DD.");
-				return;
-			}
-		}
-
-		// 6. Lógica de Rol y Contraseña de Administrador
-		boolean rolFinal = false;
-		if (esAdmin) {
-			if (!adminPass.equals("1234")) {
-				vistaReg.mostrarMensaje("Error: Contraseña de Administrador incorrecta.");
-				return;
-			}
-			rolFinal = true;
-		}
-
-		// 7. Comprobación de existencia previa
-		if (miModelo.existeUsuario(usr)) {
-			vistaReg.mostrarMensaje("Error: El nombre de usuario '" + usr + "' ya está en uso.");
-			return;
-		}
-
-		// 8. Llamada al modelo (7 parámetros: incluye el correo)
-		boolean insertadoOK = miModelo.registroCompleto(usr, pwd, rolFinal, fecha, idPregunta, respuesta, emailDestino);
-
-		if (insertadoOK) {
-			// 9. Recuperar el OTP generado automáticamente por el Trigger en MySQL
-			String otpGenerado = miModelo.obtenerUltimoOTP(usr);
-
-			if (otpGenerado != null) {
-				// 10. Envío del email real mediante el servicio de mensajería
-				Servicios.Email miCorreo = new Servicios.Email();
-				miCorreo.enviarCorreoOTP(emailDestino, otpGenerado);
-
-				vistaReg.mostrarMensaje("¡Registro casi listo! Revisa el código enviado a " + emailDestino);
-
-				// 11. Cambiar a la ventana de verificación (Ventana 18)
-				cambiarVentana(1, 18);
-			} else {
-				vistaReg.mostrarMensaje("Usuario creado, pero hubo un error generando el código de seguridad.");
-			}
-		} else {
-			vistaReg.mostrarMensaje("Error Crítico: No se pudo guardar en la base de datos.");
-		}
-	}
-
-	public ArrayList<Object[]> getDatosUsuarios() {
-		return miModelo.obtenerDatosUsuarios();
-	}
-
-	public int borrarUsuario(String usr, String pwd) {
-		return miModelo.borrar(usr, pwd);
-	}
-
-	public boolean altaUsuario(String usr, String pwd) {
-		return miModelo.insertarUsuarioAdmin(usr, pwd);
-	}
-
-	public int modificarUsuario(String usr, String pwd) {
-		return miModelo.modificar(usr, pwd);
-	}
-
-	// =========================================================================
-	// GESTIÓN DE FICHEROS (FOTO DE PERFIL)
-	// =========================================================================
-
-	/**
-	 * Implementa la gestión de ficheros mediante NIO.2. Permite subir una imagen,
-	 * crear el directorio local si no existe y renombrar el archivo basándose en la
-	 * sesión activa del usuario.
-	 */
-	public void subirFotoPerfil() {
-		// 1. Abrir explorador de archivos de Windows
-		JFileChooser chooser = new JFileChooser();
-		FileNameExtensionFilter filter = new FileNameExtensionFilter("Imágenes (JPG, PNG)", "jpg", "jpeg", "png");
-		chooser.setFileFilter(filter);
-
-		int seleccion = chooser.showOpenDialog(null);
-
-		if (seleccion == JFileChooser.APPROVE_OPTION) {
-			File archivoOrigen = chooser.getSelectedFile();
-			String usr = miModelo.getUsuarioLogueado();
-
-			try {
-				// 2. Crear carpeta "perfiles" en el proyecto si no existe
-				File carpeta = new File("perfiles");
-				if (!carpeta.exists()) {
-					carpeta.mkdir();
-				}
-
-				// 3. Copiar la imagen y llamarla como el usuario (ej: perfiles/Ivan.jpg)
-				File archivoDestino = new File("perfiles/" + usr + ".jpg");
-				Files.copy(archivoOrigen.toPath(), archivoDestino.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-				JOptionPane.showMessageDialog(null, "¡Foto de perfil actualizada con éxito!");
-
-			} catch (Exception e) {
-				System.err.println("Error al guardar fichero: " + e.getMessage());
-				JOptionPane.showMessageDialog(null, "Error al guardar la imagen.", "Error", JOptionPane.ERROR_MESSAGE);
-			}
-		}
-	}
-
-	// =========================================================================
-	// 8. RECUPERACIÓN DE CONTRASEÑA Y PERFIL
-	// =========================================================================
-
-	public void restablecerContrasena() {
-		_09_OlvidoContraseña vista = (_09_OlvidoContraseña) misVistas[9];
-
-		String usr = vista.getUsuario();
-		int idPregunta = vista.getIndicePregunta();
-		String respuesta = vista.getRespuestaSeguridad();
-		String nuevaPass = vista.getNuevaPass();
-		String confirmPass = vista.getConfirmPass();
-
-		if (usr.isEmpty() || respuesta.isEmpty() || nuevaPass.isEmpty()) {
-			vista.mostrarMensaje("Por favor, rellena todos los campos.");
-			return;
-		}
-		if (idPregunta == 0) {
-			vista.mostrarMensaje("Por favor, selecciona una pregunta de seguridad.");
-			return;
-		}
-		if (!nuevaPass.equals(confirmPass)) {
-			vista.mostrarMensaje("Las contraseñas no coinciden.");
-			return;
-		}
-		if (!miModelo.existeUsuario(usr)) {
-			vista.mostrarMensaje("El usuario indicado no existe.");
-			return;
-		}
-
-		// Comprobamos en el Modelo si la respuesta es correcta
-		boolean esCorrecta = miModelo.verificarRespuestaSeguridad(usr, idPregunta, respuesta);
-
-		if (esCorrecta) {
-			int filasAfectadas = miModelo.modificar(usr, nuevaPass);
-			if (filasAfectadas > 0) {
-				vista.mostrarMensaje("Contraseña actualizada con éxito. Ya puedes iniciar sesión.");
-				vista.limpiarCampos();
-				cambiarVentana(9, 0); // Volver al login
-			} else {
-				vista.mostrarMensaje("Error al actualizar la contraseña en la base de datos.");
-			}
-		} else {
-			vista.mostrarMensaje("La respuesta a la pregunta de seguridad es incorrecta.");
-		}
-	}
-
-	public void alAbrirPerfil() {
-		_08_PerfilUsuario vista = (_08_PerfilUsuario) misVistas[8];
-		String usr = miModelo.getUsuarioLogueado();
-
-		// 1. Extraemos las estadísticas de la BD
-		int[] stats = miModelo.obtenerEstadisticasUsuario(usr);
-		int puntos = stats[0];
-		int totalActividades = stats[1];
-
-		// 2. Calculamos lógica de negocio (Ej: Sube de nivel cada 500 puntos)
-		int nivel = (puntos / 500) + 1;
-		int monedas = puntos; // Asumimos que 1 punto = 1 moneda para la tienda
-
-		// 3. Inyectamos los datos en el banner
-		vista.setDatosBanner(usr.toUpperCase(), nivel, monedas, totalActividades);
-
-		// 4. Inyectamos las tablas
-		Object[][] datosLogros = getTablaLogrosPerfil();
-		Object[][] datosInv = getTablaInventarioPerfil();
-		vista.setTablasPerfil(datosLogros, datosInv);
-
-		File fotoFile = new File("perfiles/" + usr + ".jpg");
-		if (fotoFile.exists()) {
-			try {
-				// Leemos la imagen y la escalamos para que encaje perfecta en el cuadro de
-				// 120x120
-				BufferedImage imgOriginal = ImageIO.read(fotoFile);
-				Image imgEscalada = imgOriginal.getScaledInstance(120, 120, Image.SCALE_SMOOTH);
-				vista.setImagenPerfil(new ImageIcon(imgEscalada));
-			} catch (Exception e) {
-				vista.setImagenPerfil(null);
-			}
-		} else {
-			// Si el usuario no ha subido foto nunca, lo dejamos vacío
-			vista.setImagenPerfil(null);
-		}
-	}
-
-	// =========================================================================
-	// 4. NOTICIAS Y MISIONES
-	// =========================================================================
-
-	public ArrayList<Object[]> getNoticias() {
-		return miModelo.obtenerNoticias();
-	}
-
-	public ArrayList<Object[]> getNoticiasAdmin() {
-		return miModelo.getNoticiasAdmin();
-	}
-
-	public boolean añadirNoticia(String titulo, String tipo) {
-		boolean exito = miModelo.añadirNoticia(titulo, tipo);
-		if (exito)
-			actualizarTodasLasTablas();
-		return exito;
-	}
-
-	public boolean eliminarNoticia(String titulo) {
-		boolean exito = miModelo.eliminarNoticia(titulo);
-		if (exito)
-			actualizarTodasLasTablas();
-		return exito;
-	}
-
-	private void actualizarTodasLasTablas() {
-		if (misVistas[11] instanceof _11_PanelAdmin) {
-			((_11_PanelAdmin) misVistas[11]).llenarTabla();
-		}
-		if (misVistas[2] instanceof _02_Inicio) {
-			((_02_Inicio) misVistas[2]).cargarNoticias();
-		}
-	}
-
-	public ArrayList<Object[]> getMisiones(String tipo) {
-		return miModelo.obtenerMisiones(tipo);
-	}
-
-	// =========================================================================
-	// 5. EVENTOS, COSMÉTICOS Y LOGROS
-	// =========================================================================
-
-	public ArrayList<Object[]> getEventos() {
-		return miModelo.obtenerEventos();
-	}
-
-	public boolean añadirEvento(String nombre, String tipo, int puntos, String fecha) {
-		boolean exito = miModelo.insertarEvento(nombre, tipo, puntos, fecha);
-		if (exito) {
-			((_10_CrearEventoAdmin) misVistas[10]).cargarTablaEventos();
-		}
-		return exito;
-	}
-
-	public boolean eliminarEvento(String nombre) {
-		boolean exito = miModelo.eliminarEvento(nombre);
-		if (exito) {
-			((_10_CrearEventoAdmin) misVistas[10]).cargarTablaEventos();
-		}
-		return exito;
-	}
-
-	public String[] getPreguntasSeguridad() {
-		String sql = "SELECT enunciado FROM PREGUNTA_SEGURIDAD ORDER BY id_pregunta ASC";
-		return miModelo.obtenerDatosColumna(sql, "enunciado");
-	}
-
-	public String[] getCatalogoCosmeticos() {
-		String sql = "SELECT nombre FROM COSMETICOS";
-		return miModelo.obtenerDatosColumna(sql, "nombre");
-	}
-
-	public Object[][] getTablaLogrosPerfil() {
-	    String usr = miModelo.getUsuarioLogueado();
-	    
-	    // Añadimos "AND HL.esta_hecho = 1" para que solo aparezcan los completados
-	    String sql = "SELECT L.nombre, DATE_FORMAT(HL.fecha_desbloqueo, '%d/%m/%Y') " + 
-	                 "FROM LOGROS L " +
-	                 "JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro " + 
-	                 "WHERE HL.nombreUsuario = ? AND HL.esta_hecho = 1"; // <--- FILTRO CRÍTICO
-	                 
-	    return miModelo.obtenerDatosTabla(sql, 2, usr);
-	}
-
-	public Object[][] getTablaInventarioPerfil() {
-		String usr = miModelo.getUsuarioLogueado();
-		String sql = "SELECT C.nombre, C.tipo_personalizacion " + "FROM COSMETICOS C "
-				+ "JOIN TIENE_COSMETICO TC ON C.id_cosmetico = TC.id_cosmetico " + "WHERE TC.nombreUsuario = ?";
-		return miModelo.obtenerDatosTabla(sql, 2, usr);
-	}
-
-	public void gestionarMisionesDiarias() {
-		String usr = miModelo.getUsuarioLogueado();
-		if (usr != null && !miModelo.tieneMisionesHoy(usr)) {
-			miModelo.generarMisionesDiarias(usr);
-		}
-
-		// Inyectamos las misiones actualizadas en la vista 02
-		_02_Inicio vista = (_02_Inicio) misVistas[2];
-		vista.cargarMisiones();
-	}
-
-	// =========================================================================
-	// 6. RANKINGS Y GRUPOS
-	// =========================================================================
-
-	public Object[][] getRankingMundial() {
-		String sql = "SELECT USR, puntos FROM USERS ORDER BY puntos DESC LIMIT 10";
-		return miModelo.obtenerDatosTabla(sql, 2);
-	}
-
-	public Object[][] getRankingSemanal() {
-		String sql = "SELECT CA.nombreUsuario, SUM(A.puntos) as puntos_semanales " + "FROM COMPLETAR_ACTIVIDAD CA "
-				+ "JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad "
-				+ "WHERE YEARWEEK(CA.fecha_realizacion, 1) = YEARWEEK(CURRENT_DATE(), 1) "
-				+ "GROUP BY CA.nombreUsuario " + "ORDER BY puntos_semanales DESC " + "LIMIT 10";
-		return miModelo.obtenerDatosTabla(sql, 2);
-	}
-
-	public String[] getMisGrupos() {
-		String usr = miModelo.getUsuarioLogueado();
-		String sql = "SELECT G.nombre FROM GRUPO G " + "JOIN PERTENECE_GRUPO PG ON G.id_grupo = PG.id_grupo "
-				+ "WHERE PG.nombreUsuario = ?";
-		return miModelo.obtenerDatosColumna(sql, "nombre", usr);
-	}
-
-	public Object[][] getRankingGrupalEspecifico(String nombreGrupo) {
-		String sql = "SELECT U.USR, U.puntos " + "FROM USERS U "
-				+ "JOIN PERTENECE_GRUPO PG ON U.USR = PG.nombreUsuario " + "JOIN GRUPO G ON PG.id_grupo = G.id_grupo "
-				+ "WHERE G.nombre = ? " + "ORDER BY U.puntos DESC LIMIT 10";
-		return miModelo.obtenerDatosTabla(sql, 2, nombreGrupo);
-	}
-
-	public void guardarNuevoGrupo() {
-		_17_CrearGrupo vista = (_17_CrearGrupo) misVistas[17];
-		String nombre = vista.getNombre();
-		String desc = vista.getDescripcion();
-		boolean privado = vista.isPrivado();
-		String contrasena = vista.getContrasena();
-		String creador = miModelo.getUsuarioLogueado();
-
-		if (nombre.trim().isEmpty()) {
-			vista.mostrarMensaje("El nombre del grupo es obligatorio.");
-			return;
-		}
-		if (privado && contrasena.trim().isEmpty()) {
-			vista.mostrarMensaje("Si el grupo es privado, debes introducir una contraseña.");
-			return;
-		}
-
-		boolean exito = miModelo.crearGrupo(nombre, desc, privado, contrasena, creador);
-
-		if (exito) {
-			vista.mostrarMensaje("¡Grupo '" + nombre + "' fundado con éxito!");
-			vista.limpiarFormulario();
-			cambiarVentana(17, 12); // El índice 12 es _16_Grupos
-			// Refrescamos la vista de grupos
-			((_16_Grupos) misVistas[12]).cargarConfiguracionInicial();
-		} else {
-			vista.mostrarMensaje("Error: El nombre ya existe o hubo un fallo en la BD.");
-		}
-	}
-
-	public void mostrarDialogoUnirse() {
-		String usr = miModelo.getUsuarioLogueado();
-		String[] gruposDisponibles = miModelo.obtenerGruposDisponibles(usr);
-
-		if (gruposDisponibles.length == 0 || gruposDisponibles[0].equals("No hay datos")) {
-			javax.swing.JOptionPane.showMessageDialog(null, "No hay grupos nuevos a los que unirse.");
-			return;
-		}
-
-		String seleccion = (String) javax.swing.JOptionPane.showInputDialog(null,
-				"Selecciona el clan al que quieres unirte:", "Unirse a un Grupo",
-				javax.swing.JOptionPane.QUESTION_MESSAGE, null, gruposDisponibles, gruposDisponibles[0]);
-
-		if (seleccion != null) {
-			String pass = "";
-			Object[][] datos = miModelo.obtenerDatosTabla("SELECT es_privado FROM GRUPO WHERE nombre = ?", 1,
-					seleccion);
-			boolean esPrivado = (Boolean) datos[0][0];
-
-			if (esPrivado) {
-				pass = javax.swing.JOptionPane.showInputDialog(null, "Este grupo es PRIVADO. Introduce la contraseña:");
-				if (pass == null)
-					return;
-			}
-
-			String resultado = miModelo.unirseGrupo(usr, seleccion, pass);
-			if (resultado.equals("EXITO")) {
-				javax.swing.JOptionPane.showMessageDialog(null, "¡Bienvenido a " + seleccion + "!");
-				((_16_Grupos) misVistas[12]).cargarConfiguracionInicial(); // Refrescamos
-			} else {
-				javax.swing.JOptionPane.showMessageDialog(null, "Error: " + resultado, "Fallo",
-						javax.swing.JOptionPane.ERROR_MESSAGE);
-			}
-		}
-	}
-
-	public void alSeleccionarGrupoEnSede(String nombreGrupo) {
-		// 1. Localizamos la Vista (Índice 12 es _16_Grupos)
-		_16_Grupos vista = (_16_Grupos) misVistas[12];
-
-		// 2. Extraemos la Info General (Descripción y Puntos del Clan)
-		String sqlInfo = "SELECT descripcion, SUM(U.puntos) FROM GRUPO G "
-				+ "JOIN PERTENECE_GRUPO PG ON G.id_grupo = PG.id_grupo " + "JOIN USERS U ON PG.nombreUsuario = U.USR "
-				+ "WHERE G.nombre = ? GROUP BY G.descripcion";
-		Object[][] info = miModelo.obtenerDatosTabla(sqlInfo, 2, nombreGrupo);
-
-		if (info.length > 0 && !info[0][0].toString().equals("Sin registros")) {
-			// INYECTAMOS EN LA VISTA
-			vista.setInfoGrupo(info[0][0].toString(), info[0][1].toString());
-		}
-
-		// 3. Extraemos a los Miembros
-		Object[][] datosMiembros = getRankingGrupalEspecifico(nombreGrupo);
-		vista.setTablaMiembros(datosMiembros); // INYECTAMOS
-
-		// 4. Extraemos el Feed de Actividades
-		String sqlFeed = "SELECT CA.nombreUsuario, A.nombre, DATE_FORMAT(CA.fecha_realizacion, '%d/%m %H:%i') "
-				+ "FROM COMPLETAR_ACTIVIDAD CA " + "JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad "
-				+ "JOIN PERTENECE_GRUPO PG ON CA.nombreUsuario = PG.nombreUsuario "
-				+ "JOIN GRUPO G ON PG.id_grupo = G.id_grupo "
-				+ "WHERE G.nombre = ? ORDER BY CA.fecha_realizacion DESC LIMIT 15";
-		Object[][] datosFeed = miModelo.obtenerDatosTabla(sqlFeed, 3, nombreGrupo);
-		vista.setTablaActividades(datosFeed); // INYECTAMOS
-	}
-
-	public void abandonarGrupoSeleccionado() {
-		// 1. Localizamos la Vista
-		_16_Grupos vista = (_16_Grupos) misVistas[12];
-		String grupoActual = vista.getGrupoSeleccionado();
-
-		// 2. Validamos que haya un grupo seleccionado
-		if (grupoActual == null || grupoActual.equals("No hay datos") || grupoActual.trim().isEmpty()) {
-			javax.swing.JOptionPane.showMessageDialog(null, "No tienes ningún grupo seleccionado actualmente.");
-			return;
-		}
-
-		// 3. Confirmación de seguridad
-		int confirmacion = javax.swing.JOptionPane.showConfirmDialog(null,
-				"¿Estás completamente seguro de que deseas abandonar el clan '" + grupoActual + "'?",
-				"Confirmar Salida", javax.swing.JOptionPane.YES_NO_OPTION, javax.swing.JOptionPane.WARNING_MESSAGE);
-
-		if (confirmacion == javax.swing.JOptionPane.YES_OPTION) {
-			String usr = miModelo.getUsuarioLogueado();
-
-			// 4. Mandamos la orden al Modelo
-			boolean exito = miModelo.abandonarGrupo(usr, grupoActual);
-
-			if (exito) {
-				javax.swing.JOptionPane.showMessageDialog(null, "Has abandonado el clan exitosamente.");
-				// 5. Refrescamos la vista para que el grupo desaparezca del desplegable
-				vista.cargarConfiguracionInicial();
-			} else {
-				javax.swing.JOptionPane.showMessageDialog(null,
-						"Error en la base de datos al intentar salir del grupo.", "Error",
-						javax.swing.JOptionPane.ERROR_MESSAGE);
-			}
-		}
-	}
-	// =========================================================================
-	// 7. GESTIÓN DE ACTIVIDADES
-	// =========================================================================
-
-	public void abrirActividadEspecifica(String tipoDeporte) {
-		miModelo.setTipoActividadSeleccionada(tipoDeporte);
-		cambiarVentana(3, 4);
-	}
-
-	public Object[][] getTablaActividadesPorTipo() {
-	    String tipo = miModelo.getTipoActividadSeleccionada();
-	    String usr = miModelo.getUsuarioLogueado();
-
-	    // Sumamos todo el progreso. Si es MENOR que la meta (o 0), se muestra en disponibles.
-	    String sql = "SELECT A.nombre, A.dificultad, "
-	            + "CONCAT(IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0), ' / ', A.meta_cantidad, ' ', A.unidad_medida), "
-	            + "CONCAT(A.puntos, ' 💰') "
-	            + "FROM ACTIVIDADES A WHERE A.tipo = ? "
-	            + "AND IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0) < A.meta_cantidad";
-
-	    // Pasamos el usuario dos veces porque hay dos '?' referidos al usuario en la query
-	    return miModelo.obtenerDatosTabla(sql, 4, usr, tipo, usr);
-	}
-	
-	public Object[][] getTablaHistorialUsuario() {
-	    String usr = miModelo.getUsuarioLogueado();
-	    
-	    // Agrupamos por actividad y comprobamos con HAVING que la suma haya llegado a la meta
-	    String sql = "SELECT A.nombre, DATE_FORMAT(MAX(CA.fecha_realizacion), '%d/%m/%Y %H:%i') " 
-	            + "FROM ACTIVIDADES A "
-	            + "JOIN COMPLETAR_ACTIVIDAD CA ON A.id_actividad = CA.id_actividad "
-	            + "WHERE CA.nombreUsuario = ? "
-	            + "GROUP BY A.id_actividad, A.nombre, A.meta_cantidad "
-	            + "HAVING SUM(CA.cantidad) >= A.meta_cantidad "
-	            + "ORDER BY MAX(CA.fecha_realizacion) DESC";
-	            
-	    return miModelo.obtenerDatosTabla(sql, 2, usr);
-	}
-
-	public void guardarNuevaActividad() {
-	    _14_CrearActividad vistaCrear = (_14_CrearActividad) misVistas[15];
-	    String nombre = vistaCrear.getNombreActividad();
-	    String tipo = vistaCrear.getTipoActividad();
-	    String dif = vistaCrear.getDificultadActividad();
-	    int pts = vistaCrear.getPuntosActividad();
-	    String frec = vistaCrear.getFrecuenciaActividad();
-	    String unidad = vistaCrear.getUnidadActividad();
-	    double cantidad = vistaCrear.getCantidadMeta();
-	    
-	    // ¡NUEVO! Recogemos la categoría (WALK, RUN, etc.)
-	    String categoria = vistaCrear.getCategoriaActividad(); 
-
-	    if (nombre == null || nombre.trim().isEmpty()) {
-	        vistaCrear.mostrarMensaje("Error: El nombre es obligatorio.");
-	        return;
-	    }
-
-	    // Le pasamos el parámetro extra al Modelo
-	    boolean exito = miModelo.crearActividad(nombre, tipo, dif, pts, frec, unidad, cantidad, categoria);
-	    
-	    if (exito) {
-	        vistaCrear.mostrarMensaje("¡Actividad '" + nombre + "' creada correctamente!");
-	        vistaCrear.limpiarFormulario();
-	        cambiarVentana(14, 3);
-	    } else {
-	        vistaCrear.mostrarMensaje("Error en la Base de Datos al crear actividad.");
-	    }
-	}
-
-	public void completarActividad() {
-		_04_DentroActividad vista4 = (_04_DentroActividad) misVistas[4];
-		String actividadElegida = vista4.getActividadSeleccionada();
-
-		if (actividadElegida == null) {
-			vista4.mostrarMensaje("Por favor, selecciona una actividad primero.");
-			return;
-		}
-
-		// Pop-up para pedir la cantidad
-		String input = javax.swing.JOptionPane.showInputDialog(null,
-				"¿Qué cantidad de '" + actividadElegida + "' has realizado?", "Registrar Progreso",
-				javax.swing.JOptionPane.QUESTION_MESSAGE);
-
-		if (input != null && !input.trim().isEmpty()) {
-			try {
-				double cantidad = Double.parseDouble(input.replace(",", "."));
-				String usr = miModelo.getUsuarioLogueado();
-
-				// 1. Registramos la actividad en el historial
-				boolean exito = miModelo.registrarActividadCompletada(usr, actividadElegida, cantidad);
-
-				if (exito) {
-					// 2. Sumamos al motor de misiones
-					miModelo.actualizarProgresoMisiones(usr, actividadElegida, cantidad);
-					vista4.mostrarMensaje("¡Enhorabuena! Has completado: " + cantidad + " de " + actividadElegida);
-					vista4.cargarDatosTablas();
-				} else {
-					vista4.mostrarMensaje("Hubo un error al registrar la actividad.");
-				}
-			} catch (NumberFormatException e) {
-				vista4.mostrarMensaje("Por favor, introduce un número válido.");
-			}
-		}
 	}
 
 	public void cargarConfiguracionAjustes() {
@@ -755,122 +85,590 @@ public class Controlador {
 		_15_Configuracion vista = (_15_Configuracion) misVistas[16];
 		miModelo.guardarConfig(vista.getUsrConfig(), vista.getPwdConfig(), vista.getUrlConfig());
 		vista.mostrarMensaje("Configuración guardada. La conexión se ha reiniciado.");
-		((javax.swing.JFrame) misVistas[16]).dispose();
+		((JFrame) misVistas[16]).dispose();
 	}
 
-	public void guardarAjustes() {
-		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
+	// =========================================================================
+	// 2. AUTENTICACIÓN Y SEGURIDAD
+	// =========================================================================
 
-		// 1. Recogemos los datos
-		String usrActual = miModelo.getUsuarioLogueado();
-		String nuevoUsr = vista.getNuevoNombre();
-		String nuevoCorreo = vista.getNuevoEmail();
-		String nuevaPwd = vista.getNuevaPass();
+	public void irARegistro() {
+		if (miModelo.conectarBD())
+			cambiarVentana(0, 1);
+		else
+			((_00_Login) misVistas[0]).mostrarError("Error: No se pudo conectar a la BD.");
+	}
 
-		// 2. Validaciones básicas
-		if (nuevoUsr.trim().isEmpty() || nuevoCorreo.trim().isEmpty()) {
-			vista.mostrarMensaje("El nombre de usuario y el correo no pueden estar vacíos.");
+	public void login() {
+
+		_00_Login vista = (_00_Login) misVistas[0];
+		if (!miModelo.conectarBD()) {
+			vista.mostrarError("Error de conexión BD.");
 			return;
 		}
 
-		if (!usrActual.equals(nuevoUsr)) {
-			File fotoVieja = new File("perfiles/" + usrActual + ".jpg");
-			if (fotoVieja.exists()) {
-				File fotoNueva = new File("perfiles/" + nuevoUsr + ".jpg");
-
-				boolean renombrado = fotoVieja.renameTo(fotoNueva);
-				if (!renombrado) {
-					System.err.println("No se pudo renombrar la foto de perfil.");
-				}
-			}
-		}
-		boolean exito = miModelo.actualizarAjustes(usrActual, nuevoUsr, nuevoCorreo, nuevaPwd);
-
-		if (exito) {
-
-			miModelo.setUsuarioLogueado(nuevoUsr);
-
-			vista.mostrarMensaje("Perfil actualizado correctamente.");
-			vista.setDatosActuales(nuevoUsr, nuevoCorreo);
-			cambiarVentana(14, 8); // Volvemos al perfil
-		} else {
-			vista.mostrarMensaje("Error al actualizar. Es posible que el nombre de usuario ya esté en uso.");
+		String resultado = miModelo.loginSeguro(vista.getTxtUsu(), vista.getTxtPwd());
+		switch (resultado) {
+		case "OTP_ENVIADO":
+			new Servicios.Email().enviarCorreoOTP(miModelo.sacarEmail(), miModelo.obtenerUltimoOTP(vista.getTxtUsu()));
+			cambiarVentana(0, 18);
+			break;
+		case "LOGIN_DIRECTO":
+			cambiarVentana(0, miModelo.isAdmin() ? 11 : 2);
+			break;
+		case "INCORRECTO":
+			vista.mostrarError("Usuario o contraseña incorrectos");
+			break;
+		case "CERRAR":
+			JOptionPane.showMessageDialog(null, "Demasiados intentos fallidos.", "Bloqueo", JOptionPane.ERROR_MESSAGE);
+			System.exit(0);
+			break;
 		}
 	}
-	
-	public void marcarLogroCompletado(String nombreLogro) {
+
+	public void validarCodigoOTP(String codigoIntroducido) {
+		try (java.sql.CallableStatement cst = (java.sql.CallableStatement) miModelo.getConexion()
+				.prepareCall("{call validate_otp(?, ?)}")) {
+			cst.setString(1, miModelo.getUltimoUsuarioRegistrado());
+			cst.setString(2, codigoIntroducido);
+			cst.execute();
+			miModelo.setUsuarioLogueado(miModelo.getUltimoUsuarioRegistrado());
+			cambiarVentana(18, miModelo.isAdmin() ? 11 : 2);
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(null, e.getMessage(), "Error 2FA", JOptionPane.ERROR_MESSAGE);
+		}
+	}
+
+	public void registrarUsuario() {
+		_01_Registro vista = (_01_Registro) misVistas[1];
+		String usr = vista.getTxtNombre();
+		String email = vista.getTxtEmail();
+		String pwd = vista.getTxtPass();
+		String pwdRepetir = vista.getPasswordFieldRepetir();
+		String fecha = vista.getTxtFechaNac();
+		String respuesta = vista.getTxtRespuesta();
+
+		if (usr.trim().isEmpty() || pwd.isEmpty() || respuesta.trim().isEmpty() || email.trim().isEmpty()) {
+			vista.mostrarMensaje("Faltan campos.");
+			return;
+		}
+		if (!vista.getTxtCaptcha().equalsIgnoreCase(vista.getCaptchaGenerado())) {
+			vista.mostrarMensaje("Captcha incorrecto.");
+			return;
+		}
+		if (!pwd.equals(pwdRepetir)) {
+			vista.mostrarMensaje("Contraseñas no coinciden.");
+			return;
+		}
+
+		boolean esAdmin = vista.isModoAdmin() && vista.getPassAdmin().equals("1234");
+		if (vista.isModoAdmin() && !esAdmin) {
+			vista.mostrarMensaje("Clave Admin incorrecta.");
+			return;
+		}
+		if (miModelo.existeUsuario(usr)) {
+			vista.mostrarMensaje("Usuario en uso.");
+			return;
+		}
+
+		if (miModelo.registroCompleto(usr, pwd, esAdmin, fecha, vista.getIndicePregunta(), respuesta, email)) {
+			new Servicios.Email().enviarCorreoOTP(email, miModelo.obtenerUltimoOTP(usr));
+			vista.mostrarMensaje("Registro casi listo. Revisa tu email.");
+			cambiarVentana(1, 18);
+		} else {
+			vista.mostrarMensaje("Error en base de datos.");
+		}
+	}
+
+	public void restablecerContrasena() {
+		_09_OlvidoContraseña vista = (_09_OlvidoContraseña) misVistas[9];
+		String usr = vista.getUsuario();
+		String respuesta = vista.getRespuestaSeguridad();
+		String nueva = vista.getNuevaPass();
+
+		if (usr.isEmpty() || respuesta.isEmpty() || nueva.isEmpty()) {
+			vista.mostrarMensaje("Faltan campos.");
+			return;
+		}
+		if (!nueva.equals(vista.getConfirmPass())) {
+			vista.mostrarMensaje("Las claves no coinciden.");
+			return;
+		}
+		if (!miModelo.verificarRespuestaSoloPorUsuario(usr, respuesta)) {
+			vista.mostrarMensaje("Respuesta incorrecta.");
+			return;
+		}
+
+		if (miModelo.modificar(usr, nueva) > 0) {
+			vista.mostrarMensaje("Contraseña actualizada.");
+			vista.limpiarCampos();
+			cambiarVentana(9, 0);
+		}
+	}
+
+	// =========================================================================
+	// 3. PERFIL Y AJUSTES DE USUARIO
+	// =========================================================================
+
+	public void alAbrirPerfil() {
+	    _08_PerfilUsuario vista = (_08_PerfilUsuario) misVistas[8];
 	    String usr = miModelo.getUsuarioLogueado();
-	    if (miModelo.completarLogroEnBD(usr, nombreLogro)) {
-	        // Refrescamos la tabla de la vista inmediatamente
-	        ((_05_Logros) misVistas[5]).cargarDatosLogros();
+	    
+	    // 1. Estadísticas Base
+	    int[] stats = miModelo.obtenerEstadisticasUsuario(usr);
+	    vista.setDatosBanner(usr.toUpperCase(), (stats[0] / 500) + 1, stats[2], stats[1]);
+
+	    // 2. ¡NUEVO! Progresión (Logros y Cosméticos X / Y)
+	    int[] prog = miModelo.obtenerProgresoGlobal(usr);
+	    vista.setProgresion(prog[0], prog[1], prog[2], prog[3]);
+
+	    // 3. Tablas de Inventario y Logros
+	    vista.setTablasPerfil(getTablaLogrosPerfil(), miModelo.obtenerDatosTabla(
+	            "SELECT C.nombre, C.tipo_personalizacion FROM COSMETICOS C JOIN TIENE_COSMETICO TC ON C.id_cosmetico = TC.id_cosmetico WHERE TC.nombreUsuario = ?",
+	            2, usr));
+
+	    // 4. LÓGICA DE FOTO DE PERFIL (Evitamos SCALE_SMOOTH para que no se congele)
+	    javax.swing.ImageIcon fotoFinal = null;
+	    File fotoLocal = new File("perfiles/" + usr + ".jpg");
+	    
+	    try {
+	        if (fotoLocal.exists()) {
+	            fotoFinal = new javax.swing.ImageIcon(javax.imageio.ImageIO.read(fotoLocal).getScaledInstance(120, 120, java.awt.Image.SCALE_FAST));
+	        }
+	    } catch (Exception e) {}
+
+	    // Avatar de la BD sobreescribe al local
+	    byte[] avatarBytes = miModelo.obtenerImagenCosmetico("Avatar", usr);
+	    if (avatarBytes != null && avatarBytes.length > 0) {
+	        fotoFinal = new javax.swing.ImageIcon(new javax.swing.ImageIcon(avatarBytes).getImage().getScaledInstance(120, 120, java.awt.Image.SCALE_FAST));
+	    }
+	    vista.setImagenPerfil(fotoFinal);
+
+	    // 5. BANNER Y TEXTO EQUIPADO
+	    byte[] bannerBytes = miModelo.obtenerImagenCosmetico("Banner", usr);
+	    vista.aplicarBannerCosmetico(bannerBytes != null ? new javax.swing.ImageIcon(bannerBytes) : null);
+	    
+	    String sqlEquipado = "SELECT C.nombre FROM COSMETICOS C JOIN TIENE_COSMETICO TC ON C.id_cosmetico = TC.id_cosmetico WHERE TC.nombreUsuario = ? AND TC.equipado = true";
+	    Object[][] itemsEquipados = miModelo.obtenerDatosTabla(sqlEquipado, 1, usr);
+	    
+	    if (itemsEquipados != null && itemsEquipados.length > 0 && !itemsEquipados[0][0].toString().equals("Sin registros")) {
+	        StringBuilder sb = new StringBuilder();
+	        for (int i = 0; i < itemsEquipados.length; i++) {
+	            sb.append(itemsEquipados[i][0].toString());
+	            if (i < itemsEquipados.length - 1) sb.append(", ");
+	        }
+	        vista.setTextoEquipado(sb.toString() + ".");
+	    } else {
+	        vista.setTextoEquipado("Nada en este momento.");
+	    }
+	}
+
+	public void desequiparDesdePerfil() {
+	    _08_PerfilUsuario vista = (_08_PerfilUsuario) misVistas[8];
+	    String item = vista.getCosmeticoSeleccionado();
+	    if (item == null) { JOptionPane.showMessageDialog(null, "Selecciona ítem."); return; }
+	    
+	    if (miModelo.desequiparCosmetico(miModelo.getUsuarioLogueado(), item)) {
+	        JOptionPane.showMessageDialog(null, "¡Cosmético desequipado!");
+	        alAbrirPerfil(); // Refresco instantáneo
 	    }
 	}
 
 	public void alAbrirAjustes() {
-		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
-		String nombre = miModelo.getUsuarioLogueado();
-		String email = miModelo.sacarEmail();
-		vista.setDatosActuales(nombre, email);
+		((_13_AjustesUsuario) misVistas[14]).setDatosActuales(miModelo.getUsuarioLogueado(), miModelo.sacarEmail());
 	}
 
-	/**
-	 * Invoca el procedimiento almacenado en MySQL para validar el código OTP.
-	 * Gestiona la respuesta del servidor y, en caso de éxito, activa la sesión del
-	 * usuario.
-	 * 
-	 * @param codigoIntroducido El token de 6 caracteres que el usuario recibió por
-	 *                          email.
-	 */
-	// @Author: Hugo
-	public void validarCodigoOTP(String codigoIntroducido) {
-		String usr = miModelo.getUltimoUsuarioRegistrado();
+	public void guardarAjustes() {
+		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
+		String usrAct = miModelo.getUsuarioLogueado();
+		String nuevo = vista.getNuevoNombre();
 
-		try (java.sql.CallableStatement cst = (java.sql.CallableStatement) miModelo.getConexion()
-				.prepareCall("{call validate_otp(?, ?)}")) {
-			cst.setString(1, usr);
-			cst.setString(2, codigoIntroducido);
-			cst.execute();
+		if (nuevo.trim().isEmpty()) {
+			vista.mostrarMensaje("Nombre vacío.");
+			return;
+		}
+		if (!usrAct.equals(nuevo))
+			new File("perfiles/" + usrAct + ".jpg").renameTo(new File("perfiles/" + nuevo + ".jpg"));
 
-			// ÉXITO: Ahora entramos a la aplicación
-			miModelo.setUsuarioLogueado(usr);
-			if (miModelo.isAdmin()) {
-				cambiarVentana(18, 11); // Al panel admin
-			} else {
-				cambiarVentana(18, 2); // Al inicio
+		if (miModelo.actualizarAjustes(usrAct, nuevo, vista.getNuevoEmail(), vista.getNuevaPass())) {
+			miModelo.setUsuarioLogueado(nuevo);
+			vista.mostrarMensaje("Perfil actualizado.");
+			cambiarVentana(14, 8);
+		} else
+			vista.mostrarMensaje("Error al actualizar.");
+	}
+
+	public void subirFotoPerfil() {
+		JFileChooser chooser = new JFileChooser();
+		chooser.setFileFilter(new FileNameExtensionFilter("Imágenes", "jpg", "jpeg", "png"));
+		if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+			try {
+				File dir = new File("perfiles");
+				if (!dir.exists())
+					dir.mkdir();
+				Files.copy(chooser.getSelectedFile().toPath(),
+						new File("perfiles/" + miModelo.getUsuarioLogueado() + ".jpg").toPath(),
+						StandardCopyOption.REPLACE_EXISTING);
+				JOptionPane.showMessageDialog(null, "¡Foto actualizada!");
+			} catch (Exception e) {
+				JOptionPane.showMessageDialog(null, "Error al guardar foto.");
 			}
-
-		} catch (SQLException e) {
-			// Aquí capturamos el SIGNAL SQLSTATE '45000' que configuramos en MySQL
-			JOptionPane.showMessageDialog(null, e.getMessage(), "Error de Verificación", JOptionPane.ERROR_MESSAGE);
 		}
 	}
 
-	public boolean gestionarPuntos(String usuario, int cantidad) {
-		return miModelo.actualizarPuntos(usuario, cantidad);
+	public Object[][] getTablaInventarioPerfil() {
+		String usr = miModelo.getUsuarioLogueado();
+		String sql = "SELECT C.nombre, C.tipo_personalizacion " + "FROM COSMETICOS C "
+				+ "JOIN TIENE_COSMETICO TC ON C.id_cosmetico = TC.id_cosmetico " + "WHERE TC.nombreUsuario = ?";
+		return miModelo.obtenerDatosTabla(sql, 2, usr);
+	}
+
+	// =========================================================================
+	// 4. ACTIVIDADES
+	// =========================================================================
+
+	public void abrirActividadEspecifica(String tipoDeporte) {
+		miModelo.setTipoActividadSeleccionada(tipoDeporte);
+		cambiarVentana(3, 4);
+	}
+
+	public Object[][] getTablaActividadesPorTipo() {
+		String sql = "SELECT A.nombre, A.dificultad, CONCAT(IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0), ' / ', A.meta_cantidad, ' ', A.unidad_medida), CONCAT(A.puntos, ' 💰') FROM ACTIVIDADES A WHERE A.tipo = ? AND IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0) < A.meta_cantidad";
+		return miModelo.obtenerDatosTabla(sql, 4, miModelo.getUsuarioLogueado(),
+				miModelo.getTipoActividadSeleccionada(), miModelo.getUsuarioLogueado());
+	}
+
+	public Object[][] getTablaHistorialUsuario() {
+		String sql = "SELECT A.nombre, DATE_FORMAT(MAX(CA.fecha_realizacion), '%d/%m/%Y %H:%i') FROM ACTIVIDADES A JOIN COMPLETAR_ACTIVIDAD CA ON A.id_actividad = CA.id_actividad WHERE CA.nombreUsuario = ? GROUP BY A.id_actividad, A.nombre, A.meta_cantidad HAVING SUM(CA.cantidad) >= A.meta_cantidad ORDER BY MAX(CA.fecha_realizacion) DESC";
+		return miModelo.obtenerDatosTabla(sql, 2, miModelo.getUsuarioLogueado());
+	}
+
+	public void guardarNuevaActividad() {
+		_14_CrearActividad vista = (_14_CrearActividad) misVistas[15];
+		if (vista.getNombreActividad().isEmpty()) {
+			vista.mostrarMensaje("Falta nombre.");
+			return;
+		}
+
+		if (miModelo.crearActividad(vista.getNombreActividad(), vista.getTipoActividad(),
+				vista.getDificultadActividad(), vista.getPuntosActividad(), vista.getFrecuenciaActividad(),
+				vista.getUnidadActividad(), vista.getCantidadMeta(), vista.getCategoriaActividad())) {
+			vista.mostrarMensaje("Actividad creada.");
+			vista.limpiarFormulario();
+			cambiarVentana(14, 3);
+		} else
+			vista.mostrarMensaje("Error BD.");
+	}
+
+	public void completarActividad() {
+		_04_DentroActividad vista = (_04_DentroActividad) misVistas[4];
+		String act = vista.getActividadSeleccionada();
+		if (act == null) {
+			vista.mostrarMensaje("Selecciona actividad.");
+			return;
+		}
+
+		String input = JOptionPane.showInputDialog("Cantidad realizada:");
+		if (input != null && !input.isEmpty()) {
+			try {
+				double cant = Double.parseDouble(input.replace(",", "."));
+				if (miModelo.registrarActividadCompletada(miModelo.getUsuarioLogueado(), act, cant)) {
+					miModelo.actualizarProgresoMisiones(miModelo.getUsuarioLogueado(), act, cant);
+					vista.mostrarMensaje("¡Registrado!");
+					vista.cargarDatosTablas();
+				} else
+					vista.mostrarMensaje("Error BD.");
+			} catch (Exception e) {
+				vista.mostrarMensaje("Número inválido.");
+			}
+		}
+	}
+
+	// =========================================================================
+	// 5. TIENDA Y COSMÉTICOS
+	// =========================================================================
+
+	public Object[][] getTablaCatalogoTienda() {
+		return miModelo.obtenerCatalogoTienda(miModelo.getUsuarioLogueado());
+	}
+
+	public String[] getCatalogoCosmeticos() {
+		return miModelo.obtenerDatosColumna("SELECT nombre FROM COSMETICOS", "nombre");
+	}
+
+	public void comprarArticulo(String nombreItem, int precio) {
+		if (miModelo.comprarCosmetico(miModelo.getUsuarioLogueado(), nombreItem, precio)) {
+			JOptionPane.showMessageDialog(null, "¡Compra de " + nombreItem + " exitosa!");
+			if (misVistas[7] instanceof _07_Tienda)
+				((_07_Tienda) misVistas[7]).cargarDatosTienda();
+		} else
+			JOptionPane.showMessageDialog(null, "Error o saldo insuficiente.");
+	}
+
+	public void equiparDesdePerfil() {
+		_08_PerfilUsuario vista = (_08_PerfilUsuario) misVistas[8];
+		String item = vista.getCosmeticoSeleccionado();
+		if (item == null) {
+			JOptionPane.showMessageDialog(null, "Selecciona ítem.");
+			return;
+		}
+		if (miModelo.equiparCosmetico(miModelo.getUsuarioLogueado(), item)) {
+			JOptionPane.showMessageDialog(null, "¡Equipado!");
+			alAbrirPerfil();
+		}
+	}
+
+	// =========================================================================
+	// 6. LOGROS
+	// =========================================================================
+
+	public Object[][] getTablaLogrosDisponibles() {
+		return miModelo.obtenerLogrosPendientes(miModelo.getUsuarioLogueado());
+	}
+
+	public Object[][] getTablaLogrosPerfil() {
+		return miModelo.obtenerDatosTabla(
+				"SELECT L.nombre, DATE_FORMAT(HL.fecha_desbloqueo, '%d/%m/%Y') FROM LOGROS L JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro WHERE HL.nombreUsuario = ? AND HL.esta_hecho = 1",
+				2, miModelo.getUsuarioLogueado());
+	}
+
+	public ArrayList<String> getTodosLosLogros() {
+		return miModelo.obtenerTodosLosLogros();
+	}
+
+	public ArrayList<String> getLogrosUsuario(String usuario) {
+		return miModelo.obtenerLogrosUsuario(usuario);
 	}
 
 	public boolean darLogro(String usuario, String logro) {
 		return miModelo.asignarLogroAUsuario(usuario, logro);
 	}
 
-	public int getPuntosUsuario(String usuario) {
-		return miModelo.consultarPuntosUsuario(usuario);
-	}
-
-	/**
-	 * Solicita al modelo la lista de todos los logros disponibles en el sistema.
-	 * 
-	 * @author Hugo
-	 */
-	public ArrayList<String> getTodosLosLogros() {
-		return miModelo.obtenerTodosLosLogros();
-	}
-
 	public boolean quitarLogro(String usuario, String logro) {
 		return miModelo.eliminarLogroUsuario(usuario, logro);
 	}
 
-	public Object[][] getTablaLogrosDisponibles() {
-		return miModelo.obtenerLogrosPendientes(miModelo.getUsuarioLogueado());
+	public void marcarLogroCompletado(String nombre) {
+		if (miModelo.completarLogroEnBD(miModelo.getUsuarioLogueado(), nombre))
+			((_05_Logros) misVistas[5]).cargarDatosLogros();
+	}
+
+	// =========================================================================
+	// 7. MISIONES, EVENTOS Y NOTICIAS
+	// =========================================================================
+
+	public void gestionarMisionesDiarias() {
+		if (!miModelo.tieneMisionesHoy(miModelo.getUsuarioLogueado()))
+			miModelo.generarMisionesDiarias(miModelo.getUsuarioLogueado());
+		if (misVistas[2] instanceof _02_Inicio)
+			((_02_Inicio) misVistas[2]).cargarMisiones();
+	}
+
+	public ArrayList<Object[]> getMisiones(String tipo) {
+		return miModelo.obtenerMisiones(tipo);
+	}
+
+	public ArrayList<Object[]> getMisionesAdmin() {
+		return miModelo.consultarMisionesAdmin();
+	}
+
+	public boolean añadirMision(String desc, String tipo, int rec) {
+		boolean ex = miModelo.insertarMision(desc, tipo, rec);
+		if (ex)
+			actualizarTodasLasTablas();
+		return ex;
+	}
+
+	public boolean eliminarMision(int id) {
+		boolean ex = miModelo.eliminarMision(id);
+		if (ex)
+			actualizarTodasLasTablas();
+		return ex;
+	}
+
+	public ArrayList<Object[]> getEventos() {
+		return miModelo.obtenerEventos();
+	}
+
+	public boolean añadirEvento(String nom, String tipo, int pts, String f) {
+		boolean ex = miModelo.insertarEvento(nom, tipo, pts, f);
+		if (ex)
+			((_10_CrearEventoAdmin) misVistas[10]).cargarTablaEventos();
+		return ex;
+	}
+
+	public boolean eliminarEvento(String nom) {
+		boolean ex = miModelo.eliminarEvento(nom);
+		if (ex)
+			((_10_CrearEventoAdmin) misVistas[10]).cargarTablaEventos();
+		return ex;
+	}
+
+	public ArrayList<Object[]> getNoticias() {
+		return miModelo.obtenerNoticias();
+	}
+
+	public ArrayList<Object[]> getNoticiasAdmin() {
+		return miModelo.getNoticiasAdmin();
+	}
+
+	public boolean añadirNoticia(String titulo, String tipo) {
+		boolean ex = miModelo.añadirNoticia(titulo, tipo);
+		if (ex)
+			actualizarTodasLasTablas();
+		return ex;
+	}
+
+	public boolean eliminarNoticia(String titulo) {
+		boolean ex = miModelo.eliminarNoticia(titulo);
+		if (ex)
+			actualizarTodasLasTablas();
+		return ex;
+	}
+
+	private void actualizarTodasLasTablas() {
+		if (misVistas[11] instanceof _11_PanelAdmin)
+			((_11_PanelAdmin) misVistas[11]).llenarTabla();
+		if (misVistas[2] instanceof _02_Inicio)
+			((_02_Inicio) misVistas[2]).cargarNoticias();
+	}
+
+	// =========================================================================
+	// 8. GRUPOS Y SOCIAL
+	// =========================================================================
+
+	public String[] getMisGrupos() {
+		return miModelo.obtenerDatosColumna(
+				"SELECT G.nombre FROM GRUPO G JOIN PERTENECE_GRUPO PG ON G.id_grupo = PG.id_grupo WHERE PG.nombreUsuario = ?",
+				"nombre", miModelo.getUsuarioLogueado());
+	}
+
+	public Object[][] getRankingGrupalEspecifico(String ng) {
+		return miModelo.obtenerDatosTabla(
+				"SELECT U.USR, U.puntos FROM USERS U JOIN PERTENECE_GRUPO PG ON U.USR = PG.nombreUsuario JOIN GRUPO G ON PG.id_grupo = G.id_grupo WHERE G.nombre = ? ORDER BY U.puntos DESC LIMIT 10",
+				2, ng);
+	}
+
+	public Object[][] getRankingMundial() {
+		return miModelo.obtenerDatosTabla("SELECT USR, puntos FROM USERS ORDER BY puntos DESC LIMIT 10", 2);
+	}
+
+	public Object[][] getRankingSemanal() {
+		return miModelo.obtenerDatosTabla(
+				"SELECT CA.nombreUsuario, SUM(A.puntos) FROM COMPLETAR_ACTIVIDAD CA JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad WHERE YEARWEEK(CA.fecha_realizacion, 1) = YEARWEEK(CURRENT_DATE(), 1) GROUP BY CA.nombreUsuario ORDER BY SUM(A.puntos) DESC LIMIT 10",
+				2);
+	}
+
+	public void guardarNuevoGrupo() {
+		_17_CrearGrupo vista = (_17_CrearGrupo) misVistas[17];
+		if (vista.getNombre().isEmpty()) {
+			vista.mostrarMensaje("Falta nombre.");
+			return;
+		}
+		if (miModelo.crearGrupo(vista.getNombre(), vista.getDescripcion(), vista.isPrivado(), vista.getContrasena(),
+				miModelo.getUsuarioLogueado())) {
+			vista.mostrarMensaje("Grupo Creado.");
+			vista.limpiarFormulario();
+			cambiarVentana(17, 12);
+		} else
+			vista.mostrarMensaje("Error BD.");
+	}
+
+	public void mostrarDialogoUnirse() {
+		String[] grupos = miModelo.obtenerGruposDisponibles(miModelo.getUsuarioLogueado());
+		if (grupos.length == 0 || grupos[0].equals("No hay datos")) {
+			JOptionPane.showMessageDialog(null, "No hay grupos.");
+			return;
+		}
+		String sel = (String) JOptionPane.showInputDialog(null, "Selecciona clan:", "Unirse",
+				JOptionPane.QUESTION_MESSAGE, null, grupos, grupos[0]);
+		if (sel != null) {
+			String pass = ((Boolean) miModelo.obtenerDatosTabla("SELECT es_privado FROM GRUPO WHERE nombre = ?", 1,
+					sel)[0][0]) ? JOptionPane.showInputDialog("Contraseña:") : "";
+			if (pass == null)
+				return;
+			String res = miModelo.unirseGrupo(miModelo.getUsuarioLogueado(), sel, pass);
+			JOptionPane.showMessageDialog(null, res.equals("EXITO") ? "¡Unido!" : res);
+		}
+	}
+
+	public void abandonarGrupoSeleccionado() {
+		_16_Grupos vista = (_16_Grupos) misVistas[12];
+		if (vista.getGrupoSeleccionado() != null && !vista.getGrupoSeleccionado().isEmpty()) {
+			if (JOptionPane.showConfirmDialog(null, "¿Seguro?", "Salir",
+					JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+				if (miModelo.abandonarGrupo(miModelo.getUsuarioLogueado(), vista.getGrupoSeleccionado()))
+					vista.cargarConfiguracionInicial();
+			}
+		}
+	}
+
+	public void alSeleccionarGrupoEnSede(String ng) {
+		_16_Grupos vista = (_16_Grupos) misVistas[12];
+		Object[][] info = miModelo.obtenerDatosTabla(
+				"SELECT descripcion, SUM(U.puntos) FROM GRUPO G JOIN PERTENECE_GRUPO PG ON G.id_grupo = PG.id_grupo JOIN USERS U ON PG.nombreUsuario = U.USR WHERE G.nombre = ? GROUP BY G.descripcion",
+				2, ng);
+		if (info.length > 0 && !info[0][0].equals("Sin registros"))
+			vista.setInfoGrupo(info[0][0].toString(), info[0][1].toString());
+		vista.setTablaMiembros(getRankingGrupalEspecifico(ng));
+		vista.setTablaActividades(miModelo.obtenerDatosTabla(
+				"SELECT CA.nombreUsuario, A.nombre, DATE_FORMAT(CA.fecha_realizacion, '%d/%m %H:%i') FROM COMPLETAR_ACTIVIDAD CA JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad JOIN PERTENECE_GRUPO PG ON CA.nombreUsuario = PG.nombreUsuario JOIN GRUPO G ON PG.id_grupo = G.id_grupo WHERE G.nombre = ? ORDER BY CA.fecha_realizacion DESC LIMIT 15",
+				3, ng));
+	}
+
+	// =========================================================================
+	// 9. ADMINISTRADOR Y MISC
+	// =========================================================================
+
+	public ArrayList<Object[]> getDatosUsuarios() {
+		return miModelo.obtenerDatosUsuarios();
+	}
+
+	public boolean altaUsuario(String usr, String pwd) {
+		return miModelo.insertarUsuarioAdmin(usr, pwd);
+	}
+
+	public int borrarUsuario(String usr, String pwd) {
+		return miModelo.borrar(usr, pwd);
+	}
+
+	public int modificarUsuario(String usr, String pwd) {
+		return miModelo.modificar(usr, pwd);
+	}
+
+	public boolean gestionarPuntos(String u, int c) {
+		return miModelo.actualizarPuntos(u, c);
+	}
+
+	public int getPuntosUsuario(String u) {
+		return miModelo.consultarPuntosUsuario(u);
+	}
+
+	public int getMiPuestoMundial(String u) {
+		return miModelo.obtenerPuestoMundial(u);
+	}
+
+	public int getMiPuestoSemanal(String u) {
+		return miModelo.obtenerPuestoSemanal(u);
+	}
+
+	public String getUsuarioLogueado() {
+		return miModelo.getUsuarioActual();
+	}
+
+	public String[] getPreguntasSeguridad() {
+		return miModelo.obtenerDatosColumna("SELECT enunciado FROM PREGUNTA_SEGURIDAD ORDER BY id_pregunta ASC",
+				"enunciado");
+	}
+
+	public String recuperarPreguntaUsuario(String u) {
+		if (miModelo.getConexion() == null)
+			miModelo.conectarBD();
+		return miModelo.obtenerPreguntaDeUsuario(u);
+	}
+
+	public void actualizarMisionesEnInicio() {
+		if (misVistas[2] != null)
+			((_02_Inicio) misVistas[2]).cargarMisiones();
 	}
 }

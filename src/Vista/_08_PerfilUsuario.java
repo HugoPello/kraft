@@ -1,4 +1,3 @@
-//@Autor : Carlos/Diego
 package Vista;
 
 import java.awt.BorderLayout;
@@ -8,6 +7,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagLayout;
+import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -43,30 +43,33 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 	private Controlador miControlador;
 	private Modelo miModelo;
 
+	private JPanel panelBanner;
 	private JLabel lblNombreUserBanner;
 	private JLabel lblStatsUserBanner;
 	private JLabel lblFotoPerfil;
+	private JLabel lblFondoBanner;
+	private JLabel lblEquipadoText;
 
-	// --- AÑADIDO: Guardamos las tablas como variables para poder actualizarlas ---
+	// NUEVO: Variables para actualizar las cajas dinámicamente
+	private JLabel lblValorLogros;
+	private JLabel lblValorCosmeticos;
+
 	private JTable tablaLogros;
 	private JTable tablaCosmeticos;
 
 	public _08_PerfilUsuario() {
 		Dimension tamanoPantalla = Toolkit.getDefaultToolkit().getScreenSize();
-		int anchoPantalla = tamanoPantalla.width;
-		int altoPantalla = tamanoPantalla.height;
-
 		setUndecorated(true);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setExtendedState(JFrame.MAXIMIZED_BOTH);
-		setBounds(0, 0, anchoPantalla, altoPantalla);
+		setBounds(0, 0, tamanoPantalla.width, tamanoPantalla.height);
 
 		contentPane = new JPanel();
 		contentPane.setBackground(GRIS_FONDO);
 		setContentPane(contentPane);
 		contentPane.setLayout(new BorderLayout(0, 0));
 
-		// HEADER
+		// --- HEADER ---
 		JPanel header = new JPanel();
 		header.setBackground(new Color(15, 15, 15));
 		header.setPreferredSize(new Dimension(0, 70));
@@ -84,7 +87,6 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 		JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 15));
 		headerRight.setOpaque(false);
 
-		// BOTÓN GRUPOS (AÑADIDO)
 		JButton btnGrupos = crearBotonIcono("👥");
 		btnGrupos.addActionListener(e -> {
 			if (miControlador != null)
@@ -105,11 +107,13 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 		headerRight.add(btnCerrar);
 		header.add(headerRight, BorderLayout.EAST);
 
-		// LIENZO
+		// --- LIENZO CENTRAL ---
 		contenedorReal = new JPanel();
 		contenedorReal.setBackground(GRIS_FONDO);
 		contenedorReal.setLayout(null);
-		contenedorReal.setPreferredSize(new Dimension(1450, 880));
+
+		// ¡SOLUCIÓN BOTÓN CORTADO! -> Aumentamos a 1050
+		contenedorReal.setPreferredSize(new Dimension(1450, 1050));
 
 		JPanel panelCentrador = new JPanel(new GridBagLayout());
 		panelCentrador.setBackground(GRIS_FONDO);
@@ -120,8 +124,8 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 		scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 		contentPane.add(scrollPane, BorderLayout.CENTER);
 
-		// BANNER
-		JPanel panelBanner = new JPanel();
+		// --- BANNER PRINCIPAL ---
+		panelBanner = new JPanel();
 		panelBanner.setBackground(NARANJA);
 		panelBanner.setBorder(new LineBorder(Color.BLACK, 3));
 		panelBanner.setBounds(25, 20, 1400, 180);
@@ -173,36 +177,69 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 		});
 		panelBanner.add(btnCerrarSesion);
 
-		// CAJAS STATS
-		contenedorReal.add(crearCajaEstadistica("🏆", "18 / 50", "Logros", 25, 220));
-		contenedorReal.add(crearCajaEstadistica("👕", "12 / 20", "Cosméticos", 505, 220));
-		contenedorReal.add(crearCajaEstadistica("🎯", "34", "Retos Completados", 985, 220));
+		// IMAGEN DE FONDO
+		lblFondoBanner = new JLabel();
+		lblFondoBanner.setBounds(0, 0, 1400, 180);
+		panelBanner.add(lblFondoBanner);
+		panelBanner.setComponentZOrder(lblFondoBanner, panelBanner.getComponentCount() - 1);
 
+		// --- CAJAS STATS (Guardamos el JLabel del valor para editarlo luego) ---
+		JPanel cajaLogros = crearCajaEstadistica("🏆", "...", "Logros Desbloqueados", 200, 220);
+		lblValorLogros = (JLabel) cajaLogros.getComponent(0); // El valor es el primer componente
+		contenedorReal.add(cajaLogros);
+
+		JPanel cajaCosm = crearCajaEstadistica("👕", "...", "Cosméticos en Propiedad", 750, 220);
+		lblValorCosmeticos = (JLabel) cajaCosm.getComponent(0);
+		contenedorReal.add(cajaCosm);
+
+		// --- BARRA DE EQUIPADO DINÁMICA ---
 		JPanel panelEquipado = new JPanel(null);
 		panelEquipado.setBackground(NARANJA);
 		panelEquipado.setBorder(new LineBorder(Color.BLACK, 3));
 		panelEquipado.setBounds(25, 420, 1400, 60);
 		contenedorReal.add(panelEquipado);
 
-		JLabel tEq = new JLabel("EQUIPADO: Zapatillas Running, Camiseta Básica Negra, Aura de Fuego.");
-		tEq.setFont(new Font("Arial Black", Font.PLAIN, 14));
-		tEq.setForeground(Color.WHITE);
-		tEq.setBounds(20, 15, 1300, 30);
-		panelEquipado.add(tEq);
+		lblEquipadoText = new JLabel("EQUIPADO: Cargando objetos...");
+		lblEquipadoText.setFont(new Font("Arial Black", Font.PLAIN, 14));
+		lblEquipadoText.setForeground(Color.WHITE);
+		lblEquipadoText.setBounds(20, 15, 1300, 30);
+		panelEquipado.add(lblEquipadoText);
 
-		// --- TABLAS VACÍAS AL INICIO ---
+		// --- TABLAS ---
 		String[] colL = { "Logro Desbloqueado", "Fecha" };
-		Object[][] datL = {}; // Vacío, lo llenará la BD
-
-		// Guardamos la referencia del JPanel y sacamos la tabla para guardarla
-		JPanel panelTablaLogros = crearCajaTabla("LOGROS RECIENTES", datL, colL, 25, 500);
+		JPanel panelTablaLogros = crearCajaTabla("LOGROS RECIENTES", new Object[][] {}, colL, 25, 500);
 		contenedorReal.add(panelTablaLogros);
 
 		String[] colC = { "Ítem", "Tipo de Cosmético" };
-		Object[][] datC = {}; // Vacío, lo llenará la BD
-
-		JPanel panelTablaCosmeticos = crearCajaTabla("INVENTARIO COSMÉTICO", datC, colC, 745, 500);
+		JPanel panelTablaCosmeticos = crearCajaTabla("INVENTARIO COSMÉTICO", new Object[][] {}, colC, 745, 500);
 		contenedorReal.add(panelTablaCosmeticos);
+
+		// --- BOTÓN DE EQUIPAR ---
+		JButton btnEquipar = new JButton("EQUIPAR OBJETO SELECCIONADO");
+		btnEquipar.setBounds(745, 870, 680, 50);
+		btnEquipar.setBackground(NARANJA);
+		btnEquipar.setForeground(Color.BLACK);
+		btnEquipar.setFont(new Font("Arial Black", Font.BOLD, 18));
+		btnEquipar.setFocusPainted(false);
+		btnEquipar.setBorder(new LineBorder(Color.BLACK, 2));
+		btnEquipar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		btnEquipar.addActionListener(e -> {
+			if (miControlador != null)
+				miControlador.equiparDesdePerfil();
+		});
+		contenedorReal.add(btnEquipar);
+
+		// --- BOTÓN DE DESEQUIPAR ---
+		JButton btnDesequipar = new JButton("DESEQUIPAR SELECCIONADO");
+		btnDesequipar.setBounds(745, 930, 680, 40);
+		btnDesequipar.setBackground(Color.GRAY);
+		btnDesequipar.setForeground(Color.WHITE);
+		btnDesequipar.setFont(new Font("Arial Black", Font.BOLD, 14));
+		btnDesequipar.addActionListener(e -> {
+			if (miControlador != null)
+				miControlador.desequiparDesdePerfil();
+		});
+		contenedorReal.add(btnDesequipar);
 
 		this.addComponentListener(new ComponentAdapter() {
 			@Override
@@ -210,22 +247,73 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 				if (miControlador != null) {
 					try {
 						miControlador.alAbrirPerfil();
-						// 1. Llenamos la tabla Logros
-						Object[][] datosLogros = miControlador.getTablaLogrosPerfil();
-						tablaLogros.setModel(new javax.swing.table.DefaultTableModel(datosLogros,
-								new String[] { "Logro", "Fecha" }));
-
-						// 2. Llenamos la tabla Inventario
-						Object[][] datosInv = miControlador.getTablaInventarioPerfil();
-						tablaCosmeticos.setModel(
-								new javax.swing.table.DefaultTableModel(datosInv, new String[] { "Ítem", "Tipo" }));
 					} catch (Exception ex) {
-						System.err.println("Error al cargar datos del perfil: " + ex.getMessage());
 					}
 				}
 			}
 		});
 	}
+
+	// =======================================================
+	// MÉTODOS PÚBLICOS PARA EL CONTROLADOR
+	// =======================================================
+
+	public void setProgresion(int misLogros, int totalLogros, int misCosm, int totalCosm) {
+		lblValorLogros.setText(misLogros + " / " + totalLogros);
+		lblValorCosmeticos.setText(misCosm + " / " + totalCosm);
+	}
+
+	public void aplicarBannerCosmetico(ImageIcon icono) {
+		if (icono != null) {
+			// USAMOS SCALE_FAST PARA EVITAR CONGELAMIENTOS
+			Image img = icono.getImage().getScaledInstance(1400, 180, Image.SCALE_FAST);
+			lblFondoBanner.setIcon(new ImageIcon(img));
+			panelBanner.setOpaque(false);
+			lblStatsUserBanner.setForeground(Color.WHITE);
+		} else {
+			lblFondoBanner.setIcon(null);
+			panelBanner.setOpaque(true);
+			panelBanner.setBackground(NARANJA);
+			lblStatsUserBanner.setForeground(Color.BLACK);
+		}
+	}
+
+	public void setTextoEquipado(String texto) {
+		lblEquipadoText.setText("EQUIPADO: " + texto);
+	}
+
+	public String getCosmeticoSeleccionado() {
+		int fila = tablaCosmeticos.getSelectedRow();
+		if (fila == -1)
+			return null;
+		return tablaCosmeticos.getValueAt(fila, 0).toString();
+	}
+
+	public void setDatosBanner(String usr, int nivel, int monedas, int actividades) {
+		lblNombreUserBanner.setText(usr);
+		lblStatsUserBanner
+				.setText("Nivel Usuario: " + nivel + "  |  Monedas: " + monedas + "  |  Actividades: " + actividades);
+	}
+
+	public void setTablasPerfil(Object[][] datosLogros, Object[][] datosInventario) {
+		tablaLogros.setModel(new DefaultTableModel(datosLogros, new String[] { "Logro", "Fecha" }));
+		tablaCosmeticos.setModel(new DefaultTableModel(datosInventario, new String[] { "Ítem", "Tipo" }));
+	}
+
+	public void setImagenPerfil(ImageIcon icono) {
+		if (icono != null) {
+			lblFotoPerfil.setIcon(icono);
+			lblFotoPerfil.setText("");
+		} else {
+			lblFotoPerfil.setIcon(null);
+			lblFotoPerfil.setText("Sin Foto");
+			lblFotoPerfil.setForeground(Color.WHITE);
+		}
+	}
+
+	// =======================================================
+	// MÉTODOS DE UI DE APOYO
+	// =======================================================
 
 	private JButton crearBotonIcono(String icono) {
 		JButton btn = new JButton(icono);
@@ -265,14 +353,14 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 		caja.setBounds(x, y, 440, 180);
 
 		JLabel val = new JLabel(valor);
-		val.setFont(new Font("Arial Black", Font.BOLD, 30));
+		val.setFont(new Font("Arial Black", Font.BOLD, 38)); // Letra más grande para los números
 		val.setForeground(Color.WHITE);
 		val.setHorizontalAlignment(SwingConstants.CENTER);
-		val.setBounds(0, 60, 440, 40);
+		val.setBounds(0, 50, 440, 50);
 		caja.add(val);
 
 		JLabel txt = new JLabel(emoji + " " + etiqueta);
-		txt.setFont(new Font("Arial Black", Font.PLAIN, 16));
+		txt.setFont(new Font("Arial Black", Font.PLAIN, 18));
 		txt.setForeground(Color.BLACK);
 		txt.setHorizontalAlignment(SwingConstants.CENTER);
 		txt.setBounds(0, 110, 440, 30);
@@ -281,7 +369,6 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 		return caja;
 	}
 
-	// --- AÑADIDO: Modificamos el método para que guarde las JTable generadas ---
 	private JPanel crearCajaTabla(String titulo, Object[][] datos, String[] col, int x, int y) {
 		JPanel p = new JPanel(new BorderLayout());
 		p.setBackground(NARANJA);
@@ -309,12 +396,10 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 		tabla.setSelectionBackground(NARANJA);
 		tabla.setFont(new Font("Arial", Font.PLAIN, 16));
 
-		// Guardamos la tabla generada en nuestra variable global
-		if (titulo.equals("LOGROS RECIENTES")) {
+		if (titulo.equals("LOGROS RECIENTES"))
 			tablaLogros = tabla;
-		} else {
+		else
 			tablaCosmeticos = tabla;
-		}
 
 		JScrollPane scroll = new JScrollPane(tabla);
 		scroll.setBorder(new LineBorder(Color.BLACK, 2));
@@ -327,27 +412,6 @@ public class _08_PerfilUsuario extends JFrame implements Vista {
 		p.add(cont, BorderLayout.CENTER);
 
 		return p;
-	}
-
-	public void setDatosBanner(String usr, int nivel, int monedas, int actividades) {
-		lblNombreUserBanner.setText(usr);
-		lblStatsUserBanner
-				.setText("Nivel Usuario: " + nivel + "  |  Monedas: " + monedas + "  |  Actividades: " + actividades);
-	}
-
-	public void setTablasPerfil(Object[][] datosLogros, Object[][] datosInventario) {
-		tablaLogros.setModel(new DefaultTableModel(datosLogros, new String[] { "Logro", "Fecha" }));
-		tablaCosmeticos.setModel(new DefaultTableModel(datosInventario, new String[] { "Ítem", "Tipo" }));
-	}
-	
-	public void setImagenPerfil(ImageIcon icono) {
-		if (icono != null) {
-			lblFotoPerfil.setIcon(icono);
-		} else {
-			lblFotoPerfil.setIcon(null);
-			lblFotoPerfil.setText("Sin Foto");
-			lblFotoPerfil.setForeground(Color.WHITE);
-		}
 	}
 
 	@Override

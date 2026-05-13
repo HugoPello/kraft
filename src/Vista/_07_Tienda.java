@@ -1,246 +1,202 @@
-//@Autor : Diego / Carloss
 package Vista;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridLayout;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
+import javax.swing.BorderFactory;
 import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
-import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
+import javax.swing.table.DefaultTableModel;
 
 import Controlador.Controlador;
 import Modelo.Modelo;
 
 public class _07_Tienda extends JFrame implements Vista {
 
-	private static final long serialVersionUID = 1L;
-	private JPanel contentPane;
-	private JPanel panelCentral; 
-	
-	// Botones del Header
-	private JButton btnCerrar, btnMin;
-	private JButton btnHome, btnPerfil, btnActividades, btnAjustes, btnTrofeo, btnCarrito;
+    private static final long serialVersionUID = 1L;
+    private JPanel contentPane;
+    private JTable tablaTienda;
+    private DefaultTableModel modeloTabla;
+    
+    private final Color NARANJA = new Color(255, 128, 0);
+    private final Color GRIS_FONDO = new Color(25, 25, 25);
+    private final Color GRIS_RECTANGULO = new Color(40, 40, 40);
+    
+    private Controlador miControlador;
+    private Modelo miModelo;
 
-	// Colores
-	private final Color NARANJA = new Color(255, 128, 0);
-	private final Color GRIS_FONDO = new Color(25, 25, 25);
-	private final Color GRIS_RECTANGULO = new Color(40, 40, 40);
-	private final Color GRIS_TARJETA = new Color(100, 100, 100);
-	
-	private Controlador miControlador;
-	private Modelo miModelo;
+    public _07_Tienda() {
+        setUndecorated(true);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
 
-	public _07_Tienda() {
-		// --- 1. CONFIGURACIÓN BÁSICA DE LA VENTANA ---
-		setUndecorated(true);
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setExtendedState(JFrame.MAXIMIZED_BOTH);
-		setBounds(0, 0, 1920, 1080);
+        contentPane = new JPanel(new BorderLayout());
+        contentPane.setBackground(GRIS_FONDO);
+        setContentPane(contentPane);
 
-		contentPane = new JPanel();
-		contentPane.setBackground(GRIS_FONDO);
-		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-		setContentPane(contentPane);
-		contentPane.setLayout(new BorderLayout(0, 0));
+        // --- HEADER ---
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(new Color(15, 15, 15));
+        header.setPreferredSize(new Dimension(0, 70));
+        contentPane.add(header, BorderLayout.NORTH);
 
-		// --- 2. CABECERA (HEADER) UNIFICADO ---
-		JPanel header = new JPanel();
-		header.setBackground(new Color(15, 15, 15));
-		header.setPreferredSize(new Dimension(0, 70));
-		header.setLayout(new BorderLayout()); 
-		contentPane.add(header, BorderLayout.NORTH);
+        JLabel lblKraft = new JLabel(" KRAFT - TIENDA");
+        lblKraft.setForeground(NARANJA);
+        lblKraft.setFont(new Font("Arial Black", Font.BOLD, 26));
+        header.add(lblKraft, BorderLayout.WEST);
 
-		// Header Izquierda (Logo)
-		JPanel headerLeft = new JPanel();
-		headerLeft.setOpaque(false);
-		headerLeft.setLayout(new FlowLayout(FlowLayout.LEFT, 20, 15));
-		header.add(headerLeft, BorderLayout.WEST);
+        JPanel panelBotonesHeader = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 15));
+        panelBotonesHeader.setOpaque(false);
+        header.add(panelBotonesHeader, BorderLayout.EAST);
 
-		JLabel lblKraft = new JLabel("KRAFT - TIENDA");
-		lblKraft.setForeground(NARANJA);
-		lblKraft.setFont(new Font("Arial Black", Font.BOLD, 26));
-		headerLeft.add(lblKraft);
-		
-		// Header Derecha (Navegación y Control)
-		JPanel headerRight = new JPanel();
-		headerRight.setOpaque(false);
-		headerRight.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 15));
-		header.add(headerRight, BorderLayout.EAST);
+        panelBotonesHeader.add(crearBotonIcono("🏠", 2));
+        panelBotonesHeader.add(crearBotonIcono("👤", 8));
+        panelBotonesHeader.add(crearBotonIcono("🏃", 3));
+        panelBotonesHeader.add(crearBotonIcono("🛒", 7));
+        panelBotonesHeader.add(crearBotonIcono("🏅", 5));
+        panelBotonesHeader.add(crearBotonIcono("🏆", 6));
+        panelBotonesHeader.add(crearBotonIcono("⚙", 11));
+        
+        panelBotonesHeader.add(Box.createHorizontalStrut(15));
+        panelBotonesHeader.add(crearBotonControl("-", Color.GRAY, e -> setState(JFrame.ICONIFIED)));
+        panelBotonesHeader.add(crearBotonControl("X", new Color(220, 40, 40), e -> System.exit(0)));
 
-		// Instanciamos botones con el estilo de Carlos
-		btnHome = crearBotonIcono("🏠");
-		btnHome.addActionListener(e -> miControlador.cambiarVentana(7, 2));
+        // --- PANEL CENTRAL ---
+        JPanel panelCentral = new JPanel(new BorderLayout(20, 20));
+        panelCentral.setOpaque(false);
+        panelCentral.setBorder(new EmptyBorder(30, 50, 30, 50));
+        contentPane.add(panelCentral, BorderLayout.CENTER);
 
-		btnPerfil = crearBotonIcono("👤");
-		btnPerfil.addActionListener(e -> miControlador.cambiarVentana(7, 8));
+        JLabel lblTitulo = new JLabel("CATÁLOGO DE COSMÉTICOS", SwingConstants.CENTER);
+        lblTitulo.setForeground(NARANJA);
+        lblTitulo.setFont(new Font("Arial Black", Font.BOLD, 45));
+        panelCentral.add(lblTitulo, BorderLayout.NORTH);
 
-		btnActividades = crearBotonIcono("🏃");
-		btnActividades.addActionListener(e -> miControlador.cambiarVentana(7, 3));
+        // --- TABLA DINÁMICA ---
+        String[] columnas = {"ÍTEM", "TIPO", "PRECIO", "ESTADO"};
+        modeloTabla = new DefaultTableModel(null, columnas) {
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
+        };
 
-		btnCarrito = crearBotonIcono("🛒");
-		btnCarrito.addActionListener(e -> miControlador.cambiarVentana(7, 7));
+        tablaTienda = new JTable(modeloTabla);
+        configurarEstiloTabla();
 
-		btnTrofeo = crearBotonIcono("🏆");
-		btnTrofeo.addActionListener(e -> miControlador.cambiarVentana(7, 6));
+        JScrollPane scrollPane = new JScrollPane(tablaTienda);
+        scrollPane.setBorder(BorderFactory.createLineBorder(NARANJA, 1));
+        scrollPane.getViewport().setBackground(GRIS_RECTANGULO);
+        panelCentral.add(scrollPane, BorderLayout.CENTER);
 
-		btnAjustes = crearBotonIcono("⚙");
-		btnAjustes.addActionListener(e -> miControlador.cambiarVentana(7, 11));
+        // --- BOTÓN DE COMPRAR ---
+        JButton btnComprar = new JButton("COMPRAR ARTÍCULO SELECCIONADO");
+        btnComprar.setFont(new Font("Arial Black", Font.BOLD, 18));
+        btnComprar.setBackground(NARANJA);
+        btnComprar.setForeground(Color.BLACK);
+        btnComprar.setFocusPainted(false);
+        btnComprar.setPreferredSize(new Dimension(0, 60));
+        
+        btnComprar.addActionListener(e -> accionarCompra());
+        panelCentral.add(btnComprar, BorderLayout.SOUTH);
 
-		headerRight.add(btnHome);
-		headerRight.add(btnPerfil);
-		headerRight.add(btnActividades);
-		headerRight.add(btnCarrito);
-		headerRight.add(btnTrofeo);
-		headerRight.add(btnAjustes);
+        // --- ESCUCHADOR DE CARGA ---
+        this.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentShown(java.awt.event.ComponentEvent e) {
+                cargarDatosTienda();
+            }
+        });
+    }
 
-		JPanel separador = new JPanel();
-		separador.setPreferredSize(new Dimension(10, 0));
-		separador.setOpaque(false);
-		headerRight.add(separador);
+    public void cargarDatosTienda() {
+        if (miControlador == null) return;
+        String[] cabecera = {"ÍTEM", "TIPO", "PRECIO", "ESTADO"};
+        Object[][] datosRaw = miControlador.getTablaCatalogoTienda();
+        modeloTabla.setDataVector(datosRaw, cabecera);
+        configurarEstiloTabla();
+    }
 
-		btnMin = new JButton("-");
-		estilizarBotonControl(btnMin, 26, Color.GRAY);
-		btnMin.addActionListener(e -> setState(JFrame.ICONIFIED));
-		headerRight.add(btnMin);
+    private void configurarEstiloTabla() {
+        tablaTienda.setBackground(GRIS_RECTANGULO);
+        tablaTienda.setForeground(Color.WHITE);
+        tablaTienda.setRowHeight(60);
+        tablaTienda.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        tablaTienda.getTableHeader().setBackground(Color.BLACK);
+        tablaTienda.getTableHeader().setForeground(NARANJA);
+        tablaTienda.getTableHeader().setFont(new Font("Tahoma", Font.BOLD, 18));
+        tablaTienda.setSelectionBackground(NARANJA);
+        tablaTienda.setSelectionForeground(Color.BLACK);
+        tablaTienda.setGridColor(new Color(60, 60, 60));
+        tablaTienda.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    }
 
-		btnCerrar = new JButton("X");
-		estilizarBotonControl(btnCerrar, 18, new Color(220, 40, 40));
-		btnCerrar.addActionListener(e -> System.exit(0));
-		headerRight.add(btnCerrar);
+    private void accionarCompra() {
+        int fila = tablaTienda.getSelectedRow();
+        if (fila != -1) {
+            String estado = (String) modeloTabla.getValueAt(fila, 3);
+            
+            if (estado.equals("ADQUIRIDO")) {
+                JOptionPane.showMessageDialog(this, "Ya posees este artículo en tu inventario.", "Atención", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
-		// --- 3. ÁREA DE TRABAJO ---
-		panelCentral = new JPanel();
-		panelCentral.setBackground(GRIS_FONDO);
-		panelCentral.setBorder(new EmptyBorder(30, 30, 30, 30));
-		contentPane.add(panelCentral, BorderLayout.CENTER);
-		panelCentral.setLayout(new GridLayout(2, 3, 20, 20));
-		
-		// Añadir las tarjetas de la tienda
-		panelCentral.add(crearTarjetaProducto("Banner - Bosque Oscuro", "🌲", "Un fondo misterioso para tu perfil.", "800 Monedas", "Banner", new Color(34, 139, 34)));
-		panelCentral.add(crearTarjetaProducto("Marco - Oro Puro", "🖼️", "Un borde dorado brillante para resaltar tu foto.", "1500 Monedas", "Borde de Marco", new Color(255, 215, 0)));
-		panelCentral.add(crearTarjetaProducto("Título - 'El Imparable'", "👑", "Muestra quién manda bajo tu nombre.", "500 Monedas", "Título de Jugador", Color.RED));
-		panelCentral.add(crearTarjetaProducto("Efecto - Rayos Azules", "⚡", "Chispas eléctricas al entrar a la app.", "1200 Monedas", "Efecto Visual", Color.BLUE));
-		panelCentral.add(crearTarjetaProducto("Banner - Atardecer", "🌅", "Un paisaje cálido y relajante.", "750 Monedas", "Banner", Color.ORANGE));
-		panelCentral.add(crearTarjetaProducto("Marco - Neón Cyberpunk", "🟣", "Un marco futurista con luces neón.", "1000 Monedas", "Borde de Marco", Color.MAGENTA));
-	}
+            String nombreItem = (String) modeloTabla.getValueAt(fila, 0);
+            String precioStr = (String) modeloTabla.getValueAt(fila, 2);
+            
+            // Limpiamos el texto "500 💰" para quedarnos solo con el número 500
+            int precioInt = Integer.parseInt(precioStr.replaceAll("[^0-9]", ""));
+            
+            // Enviamos la orden de compra al controlador
+            miControlador.comprarArticulo(nombreItem, precioInt);
+            
+        } else {
+            JOptionPane.showMessageDialog(this, "Por favor, selecciona un artículo de la tabla primero.", "Atención", JOptionPane.WARNING_MESSAGE);
+        }
+    }
 
-	// --- MÉTODOS DE SOPORTE PARA EL HEADER ---
+    private JButton crearBotonIcono(String icono, int destino) {
+        JButton btn = new JButton(icono);
+        btn.setPreferredSize(new Dimension(45, 40));
+        btn.setBackground(GRIS_RECTANGULO);
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
+        btn.setBorder(null);
+        btn.setFocusPainted(false);
+        btn.addActionListener(e -> {
+            if (miControlador != null) miControlador.cambiarVentana(7, destino);
+        });
+        return btn;
+    }
 
-	private JButton crearBotonIcono(String icono) {
-		JButton boton = new JButton(icono);
-		boton.setPreferredSize(new Dimension(45, 40));
-		boton.setBackground(GRIS_RECTANGULO);
-		boton.setForeground(Color.WHITE);
-		boton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
-		boton.setBorder(null);
-		boton.setFocusPainted(false);
-		boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		return boton;
-	}
+    private JButton crearBotonControl(String texto, Color hover, ActionListener accion) {
+        JButton btn = new JButton(texto);
+        btn.setPreferredSize(new Dimension(45, 40));
+        btn.setBackground(new Color(15, 15, 15));
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("Arial", Font.BOLD, 18));
+        btn.setBorder(null);
+        btn.addActionListener(accion);
+        btn.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { btn.setBackground(hover); }
+            @Override public void mouseExited(MouseEvent e) { btn.setBackground(new Color(15, 15, 15)); }
+        });
+        return btn;
+    }
 
-	private void estilizarBotonControl(JButton boton, int tamanoFuente, Color colorHover) {
-		boton.setPreferredSize(new Dimension(45, 40));
-		boton.setBackground(new Color(15, 15, 15));
-		boton.setForeground(Color.WHITE);
-		boton.setFont(new Font("Arial", Font.BOLD, tamanoFuente));
-		boton.setBorder(null);
-		boton.setFocusPainted(false);
-		boton.addMouseListener(new MouseAdapter() {
-			@Override public void mouseEntered(MouseEvent e) { boton.setBackground(colorHover); }
-			@Override public void mouseExited(MouseEvent e) { boton.setBackground(new Color(15, 15, 15)); }
-		});
-	}
-
-	// --- MÉTODO PARA CREAR TARJETAS (ADAPTADO A PORTÁTILES) ---
-
-	private JPanel crearTarjetaProducto(String titulo, String emoji, String desc, String precio, String tipo, Color colorPreview) {
-		// Usamos BorderLayout para la tarjeta (Norte, Centro, Sur)
-		JPanel tarjeta = new JPanel(new BorderLayout(10, 10));
-		tarjeta.setBackground(GRIS_TARJETA);
-		// CompoundBorder pone un borde negro por fuera y le da "aire" por dentro para que no se pegue el texto
-		tarjeta.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 3), new EmptyBorder(15, 15, 15, 15)));
-		
-		// ARRIBA: Título (Izquierda) y Color (Derecha)
-		JPanel topPanel = new JPanel(new BorderLayout());
-		topPanel.setOpaque(false);
-		
-		JLabel lblTit = new JLabel(titulo);
-		lblTit.setFont(new Font("Arial", Font.BOLD, 18));
-		topPanel.add(lblTit, BorderLayout.WEST);
-
-		JPanel preview = new JPanel();
-		preview.setBackground(colorPreview);
-		preview.setBorder(new LineBorder(Color.BLACK, 2));
-		preview.setPreferredSize(new Dimension(40, 40));
-		topPanel.add(preview, BorderLayout.EAST);
-		
-		tarjeta.add(topPanel, BorderLayout.NORTH);
-		
-		// CENTRO: Emoji gigante centrado automáticamente
-		JLabel lblEmoji = new JLabel(emoji, SwingConstants.CENTER);
-		lblEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 70)); // Bajado un pelín para que no desborde en portátiles
-		tarjeta.add(lblEmoji, BorderLayout.CENTER);
-		
-		// ABAJO: Descripción, Etiqueta y Botón apilados (BoxLayout vertical)
-		JPanel bottomPanel = new JPanel();
-		bottomPanel.setOpaque(false);
-		bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
-		
-		JTextArea txtDesc = new JTextArea(desc);
-		txtDesc.setFont(new Font("Arial", Font.PLAIN, 15));
-		txtDesc.setLineWrap(true);
-		txtDesc.setWrapStyleWord(true);
-		txtDesc.setOpaque(true);
-		txtDesc.setBackground(Color.WHITE);
-		txtDesc.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 1), new EmptyBorder(5, 5, 5, 5)));
-		txtDesc.setEditable(false);
-		txtDesc.setFocusable(false);
-		txtDesc.setAlignmentX(Component.CENTER_ALIGNMENT);
-		
-		JLabel lblTipo = new JLabel("TipoCosm: " + tipo, SwingConstants.CENTER);
-		lblTipo.setOpaque(true);
-		lblTipo.setBackground(Color.WHITE);
-		lblTipo.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 1), new EmptyBorder(5, 10, 5, 10)));
-		lblTipo.setAlignmentX(Component.CENTER_ALIGNMENT);
-		
-		JButton btnComprar = new JButton(precio);
-		btnComprar.setBackground(NARANJA);
-		btnComprar.setFont(new Font("Arial Black", Font.BOLD, 16));
-		btnComprar.setBorder(new LineBorder(Color.BLACK, 2));
-		btnComprar.setFocusPainted(false);
-		btnComprar.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		btnComprar.setAlignmentX(Component.CENTER_ALIGNMENT);
-		btnComprar.setMaximumSize(new Dimension(200, 45)); // Evita que el botón se ensanche a lo bestia
-		
-		// Añadimos espacios (Strut) entre los elementos
-		bottomPanel.add(txtDesc);
-		bottomPanel.add(Box.createVerticalStrut(15));
-		bottomPanel.add(lblTipo);
-		bottomPanel.add(Box.createVerticalStrut(15));
-		bottomPanel.add(btnComprar);
-		
-		tarjeta.add(bottomPanel, BorderLayout.SOUTH);
-		
-		return tarjeta;
-	}
-
-	@Override public void setModelo(Modelo miModelo) { this.miModelo = miModelo; }
-
-	@Override public void setControlador(Controlador miControlador) { this.miControlador = miControlador; }
+    @Override public void setModelo(Modelo miModelo) { this.miModelo = miModelo; }
+    @Override public void setControlador(Controlador miControlador) { this.miControlador = miControlador; }
 }
