@@ -890,4 +890,18 @@ public class Controlador {
 	    }
 	    return miModelo.obtenerPreguntaDeUsuario(usuario);
 	}
+	
+	public int getMiPuestoMundial(String usuario) {
+	    return miModelo.obtenerPuestoMundial(usuario);
+	}
+	
+	public String getUsuarioLogueado() {
+	    return miModelo.getUsuarioActual();
+	}
+
+	public int getMiPuestoSemanal(String usuario) {
+	    int puesto = miModelo.obtenerPuestoSemanal(usuario);
+	    // Si el puesto es 0, significa que no tiene registros esta semana
+	    return puesto;
+	}
 }
