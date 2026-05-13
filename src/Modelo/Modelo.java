@@ -253,6 +253,17 @@ public class Modelo {
 		return null;
 	}
 
+	/**
+	 * Actualiza los datos de identidad y seguridad del usuario en la base de datos.
+	 * Implementa una construcción dinámica de la consulta SQL mediante StringBuilder 
+	 * para permitir la actualización opcional de la contraseña (PWD) sin afectar 
+	 * a la integridad del resto de los campos.
+	 * * @param usrActual Identificador actual del usuario (necesario para la cláusula WHERE).
+	 * @param nuevoUsr Nuevo nombre de usuario (puede ser el mismo si no se desea cambiar).
+	 * @param nuevoCorreo Nueva dirección de correo electrónico vinculada.
+	 * @param nuevaPwd Nueva contraseña cifrada (si es null o vacía, se omite en la actualización).
+	 * @return true si los cambios se aplicaron correctamente; false en caso de error de persistencia.
+	 */
 	public boolean actualizarAjustes(String usrActual, String nuevoUsr, String nuevoCorreo, String nuevaPwd) {
 		StringBuilder sql = new StringBuilder("UPDATE USERS SET USR = ?, correo = ?");
 		boolean cambiarPwd = (nuevaPwd != null && !nuevaPwd.trim().isEmpty());
@@ -366,6 +377,24 @@ public class Modelo {
 	// 6. GESTIÓN DE ACTIVIDADES
 	// =========================================================================
 
+	/**
+	 * Realiza la creación atómica de una actividad, su misión vinculada y la relación entre ambas.
+	 * Este método es un "workflow" completo que garantiza la consistencia del catálogo:
+	 * 1. Inserta la ACTIVIDAD con sus métricas (meta, puntos, dificultad).
+	 * 2. Genera automáticamente una MISIÓN lógica basada en los datos de la actividad 
+	 * (ej: "Hacer 5.0 km de Running").
+	 * 3. Crea el registro en la tabla puente MISION_ACTIVIDAD para establecer la meta técnica.
+	 * * Implementa control de transacciones (Commit/Rollback) para asegurar que no se creen 
+	 * actividades sin misiones o viceversa.
+	 * * @param nombre Nombre de la actividad física.
+	 * @param tipo Categoría (Fuerza, Cardio, etc.).
+	 * @param dificultad Nivel de esfuerzo (Baja, Media, Alta).
+	 * @param puntos Recompensa base por ejecución.
+	 * @param frecuencia Diaria o Semanal.
+	 * @param unidad Unidad de medida (km, repeticiones, minutos).
+	 * @param meta Cantidad objetivo para completar la misión.
+	 * @return true si el proceso completo tuvo éxito; false si hubo rollback.
+	 */
 	public boolean crearActividad(String nombre, String tipo, String dificultad, int puntos, String frecuencia, String unidad, double meta, String categoria) {
 		try {
 			conexion.setAutoCommit(false);
@@ -582,6 +611,19 @@ public class Modelo {
 		} catch (SQLException e) {}
 	}
 
+	/**
+	 * Motor de progresión y recompensas. Gestiona el avance de las misiones activas 
+	 * del usuario y automatiza la entrega de premios.
+	 * * El proceso se divide en:
+	 * 1. Incremento de progreso: Suma la cantidad realizada a todas las misiones 
+	 * que vinculen al usuario con la actividad ejecutada.
+	 * 2. Evaluación de objetivos: Identifica misiones que han alcanzado la meta requerida.
+	 * 3. Entrega de premios (Transaccional): Incrementa la experiencia (EXP) y 
+	 * monedas del usuario, marcando la misión como finalizada para evitar cobros duplicados.
+	 * * @param usr Nombre del usuario que realiza la actividad.
+	 * @param nombreActividad Nombre técnico de la actividad completada.
+	 * @param cantidad Valor numérico del desempeño realizado (km, reps, etc.).
+	 */
 	public void actualizarProgresoMisiones(String usr, String nombreActividad, double cantidad) {
 		String sql = "UPDATE REALIZA_MISION RM JOIN MISION_ACTIVIDAD MA ON RM.id_mision = MA.id_mision JOIN ACTIVIDADES A ON MA.id_actividad = A.id_actividad SET RM.progreso = RM.progreso + ? WHERE RM.nombreUsuario = ? AND A.nombre = ? AND RM.fecha_asignacion = CURRENT_DATE";
 		try (PreparedStatement ps = conexion.prepareStatement(sql)) {
@@ -607,6 +649,16 @@ public class Modelo {
 		} catch (SQLException e) {}
 	}
 
+	/**
+	 * Recupera el listado de misiones activas y el estado de progreso del usuario actual.
+	 * Utiliza un **LEFT JOIN** para asegurar que se muestren todas las misiones del catálogo, 
+	 * incluso si el usuario aún no ha interactuado con ellas (en cuyo caso el progreso será 0).
+	 * * El método transforma los datos técnicos de la base de datos (booleanos y doubles) 
+	 * en información legible para la interfaz de usuario ("✅ HECHA" o "Progreso: X").
+	 * * @param usr Identificador del usuario que consulta sus misiones.
+	 * @param tipo Filtro para diferenciar entre misiones "Diaria" o "Semanal".
+	 * @return Una lista de arrays de objetos lista para ser inyectada en un DefaultTableModel.
+	 */
 	public ArrayList<Object[]> obtenerMisionesHoy(String usr, String tipo) {
 		ArrayList<Object[]> lista = new ArrayList<>();
 		String sql = "SELECT DISTINCT M.descripcion, IFNULL(RM.progreso, 0) AS progreso, M.recompensa, IFNULL(RM.completada, 0) AS completada FROM MISIONES M LEFT JOIN REALIZA_MISION RM ON M.id_mision = RM.id_mision AND RM.nombreUsuario = ? WHERE M.tipo = ?";
@@ -745,6 +797,20 @@ public class Modelo {
 	// 10. GRUPOS Y RANKINGS
 	// =========================================================================
 
+	/**
+	 * Realiza la creación de un nuevo grupo y la vinculación automática del creador.
+	 * Este método implementa una **transacción SQL** para asegurar la integridad referencial:
+	 * 1. Inserta el registro en la tabla GRUPO y recupera el ID generado automáticamente.
+	 * 2. Inserta la relación en la tabla PERTENECE_GRUPO usando dicho ID.
+	 * Si cualquiera de los dos pasos falla, se ejecuta un **rollback** para evitar 
+	 * que queden grupos "huérfanos" sin miembros o registros incompletos.
+	 * * @param nombre Nombre único del clan.
+	 * @param descripcion Texto descriptivo del propósito del grupo.
+	 * @param esPrivado Define si el grupo requiere contraseña para unirse.
+	 * @param contrasena Clave de acceso (null si el grupo es público).
+	 * @param creador Nombre del usuario que realiza la acción.
+	 * @return true si la transacción completa se confirmó (commit); false en caso de error.
+	 */
 	public boolean crearGrupo(String nombre, String descripcion, boolean esPrivado, String contrasena, String creador) {
 		try {
 			conexion.setAutoCommit(false);

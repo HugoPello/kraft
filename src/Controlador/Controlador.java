@@ -337,6 +337,11 @@ public class Controlador {
 		return miModelo.obtenerDatosTabla(sql, 2, miModelo.getUsuarioLogueado());
 	}
 
+	/**
+	 * Procesa el formulario de creación de una nueva actividad física en el sistema.
+	 * Valida la entrada de datos en la vista y delega la persistencia al modelo.
+	 * En caso de éxito, redirige al usuario al panel de actividades actualizado.
+	 */
 	public void guardarNuevaActividad() {
 		_14_CrearActividad vista = (_14_CrearActividad) misVistas[15];
 		if (vista.getNombreActividad().isEmpty()) {
@@ -354,6 +359,13 @@ public class Controlador {
 			vista.mostrarMensaje("Error BD.");
 	}
 
+	/**
+	 * Registra el desempeño de una actividad por parte del usuario y actualiza los sistemas dependientes.
+	 * Este método orquesta tres acciones críticas:
+	 * 1. Registro histórico en la tabla COMPLETAR_ACTIVIDAD.
+	 * 2. Actualización del progreso en tiempo real de las misiones diarias/semanales.
+	 * 3. Refresco de la interfaz de usuario para mostrar los nuevos totales de puntos.
+	 */
 	public void completarActividad() {
 		_04_DentroActividad vista = (_04_DentroActividad) misVistas[4];
 		String act = vista.getActividadSeleccionada();
@@ -579,7 +591,16 @@ public class Controlador {
 			}
 		}
 	}
-
+	
+	/**
+	 * Gestiona la carga integral de datos para la sede de un clan específico.
+	 * Este método implementa la inyección de datos (Dependency Injection) hacia la vista 
+	 * mediante la ejecución de tres consultas relacionales complejas:
+	 * 1. Agregación de puntos: Suma el rendimiento de todos los miembros del clan.
+	 * 2. Listado de miembros: Recupera el ranking interno del grupo.
+	 * 3. Feed de actividad: Cronología en tiempo real de las últimas 15 acciones del clan.
+	 * * @param nombreGrupo Identificador único del grupo seleccionado por el usuario.
+	 */
 	public void alSeleccionarGrupoEnSede(String ng) {
 		_16_Grupos vista = (_16_Grupos) misVistas[12];
 		Object[][] info = miModelo.obtenerDatosTabla(
