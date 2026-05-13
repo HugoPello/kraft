@@ -169,8 +169,20 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 				});
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		// Cambiamos el tamaño de las filas manualmente
-		table.getColumnModel().getColumn(0).setPreferredWidth(180);
-		table.getColumnModel().getColumn(1).setPreferredWidth(80);
+		java.awt.EventQueue.invokeLater(() -> {
+			table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+			table.getColumnModel().getColumn(0).setPreferredWidth(400);
+	
+			// Columna 1: Tipo (Bloqueada a 100)
+			table.getColumnModel().getColumn(1).setMinWidth(100);
+			table.getColumnModel().getColumn(1).setMaxWidth(100);
+			table.getColumnModel().getColumn(1).setPreferredWidth(100);
+	
+			// Columna 2: Puntos (Bloqueada a 80)
+			table.getColumnModel().getColumn(2).setMinWidth(80);
+			table.getColumnModel().getColumn(2).setMaxWidth(80);
+			table.getColumnModel().getColumn(2).setPreferredWidth(80);
+		});
 
 		table.setForeground(NARANJA);
 		table.setBackground(GRIS_FONDO);
@@ -333,9 +345,25 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 	        }
 	        table.setModel(modelo);
 
+	        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+
+	        // Columna 0: ID (Oculta)
 	        table.getColumnModel().getColumn(0).setMinWidth(0);
 	        table.getColumnModel().getColumn(0).setMaxWidth(0);
 	        table.getColumnModel().getColumn(0).setPreferredWidth(0);
+
+	        // Columna 1: Misión (Muy ancha)
+	        table.getColumnModel().getColumn(1).setPreferredWidth(160); // Ajusta según el tamaño de tu panel
+
+	        // Columna 2: Tipo (Fija)
+	        table.getColumnModel().getColumn(2).setMinWidth(80);
+	        table.getColumnModel().getColumn(2).setMaxWidth(80);
+	        table.getColumnModel().getColumn(2).setPreferredWidth(80);
+
+	        // Columna 3: Puntos (Fija)
+	        table.getColumnModel().getColumn(3).setMinWidth(60);
+	        table.getColumnModel().getColumn(3).setMaxWidth(60);
+	        table.getColumnModel().getColumn(3).setPreferredWidth(60);
 	    }
 	}
 
