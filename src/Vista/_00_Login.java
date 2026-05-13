@@ -3,8 +3,7 @@
  * Esta clase gestiona la entrada de credenciales del usuario, la validación
  * visual de campos obligatorios y la comunicación inicial con el controlador
  * para el inicio de sesión y la configuración de la base de datos.
- * 
- * @author Ivan, Carlos
+ * * @author Ivan, Carlos
  * @version 1.0
  */
 package Vista;
@@ -51,7 +50,6 @@ public class _00_Login extends JFrame implements Vista {
 	private Modelo miModelo;
 	private JLabel lblRespuesta;
 	private JButton btnInicio;
-	private _15_Configuracion configuracion;
 
 	public _00_Login() {
 		setUndecorated(true);
@@ -155,6 +153,7 @@ public class _00_Login extends JFrame implements Vista {
 		txtPwd.setBounds(810, 230, 200, 30);
 		panelCentral.add(txtPwd);
 
+		// AQUÍ ES DONDE EL BOTÓN LLAMA AL CONTROLADOR (Línea Mágica)
 		btnInicio = new JButton("Iniciar sesión");
 		btnInicio.setEnabled(false);
 		btnInicio.addActionListener(e -> miControlador.login());
@@ -229,24 +228,11 @@ public class _00_Login extends JFrame implements Vista {
 	public String getTxtPwd() {
 		return String.valueOf(txtPwd.getPassword());
 	}
-	
-	/**
-     * Gestiona la respuesta visual tras un intento de autenticación.
-     * Dependiendo del resultado procesado por el modelo, redirige al usuario
-     * a la pantalla de inicio o muestra un mensaje de error en la interfaz.
-     */
-	public void login() {
-		String resultado = miModelo.getResultado();
-		if (resultado.equals("Correcto")) {
-			lblRespuesta.setText("");
-			miControlador.cambiarVentana(0, 2);
-		} else if (resultado.equals("Incorrecto")) {
-			lblRespuesta.setText("Usuario o contraseña incorrectos");
-		} else {
-			System.exit(0);
-		}
-	}
 
+	/**
+	 * Muestra un mensaje de error o aviso en la etiqueta debajo de las contraseñas.
+	 * (Este método es el que llama ahora el Controlador para mostrar "Contraseña Incorrecta")
+	 */
 	public void mostrarError(String msg) {
 		lblRespuesta.setText(msg);
 	}
@@ -266,8 +252,6 @@ public class _00_Login extends JFrame implements Vista {
 
 		if (!user.trim().isEmpty() && !pass.trim().isEmpty()) {
 			btnInicio.setEnabled(true);
-		} else if (user.isEmpty() || pass.isEmpty()) {
-			btnInicio.setEnabled(false);
 		} else {
 			btnInicio.setEnabled(false);
 		}

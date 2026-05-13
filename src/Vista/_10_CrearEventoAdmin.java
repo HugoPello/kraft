@@ -157,27 +157,24 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 
 		table = new JTable();
 		table.setFont(new Font("Tahoma", Font.PLAIN, 9));
-		table.setModel(
-				new DefaultTableModel(
-						new Object[][] { },
-						new String[] { "Misión", "Tipo", "Puntos" }) {
-					// Con esto se bloquea la edición de celdas
-					@Override
-					public boolean isCellEditable(int row, int column) {
-						return false;
-					}
-				});
+		table.setModel(new DefaultTableModel(new Object[][] {}, new String[] { "Misión", "Tipo", "Puntos" }) {
+			// Con esto se bloquea la edición de celdas
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				return false;
+			}
+		});
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		// Cambiamos el tamaño de las filas manualmente
 		java.awt.EventQueue.invokeLater(() -> {
 			table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 			table.getColumnModel().getColumn(0).setPreferredWidth(400);
-	
+
 			// Columna 1: Tipo (Bloqueada a 100)
 			table.getColumnModel().getColumn(1).setMinWidth(100);
 			table.getColumnModel().getColumn(1).setMaxWidth(100);
 			table.getColumnModel().getColumn(1).setPreferredWidth(100);
-	
+
 			// Columna 2: Puntos (Bloqueada a 80)
 			table.getColumnModel().getColumn(2).setMinWidth(80);
 			table.getColumnModel().getColumn(2).setMaxWidth(80);
@@ -204,7 +201,7 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		panel.add(lblTipoEvento);
 
 		JComboBox cbxTipoEvento = new JComboBox();
-		cbxTipoEvento.setModel(new DefaultComboBoxModel(new String[] {"Diaria", "Semanal"}));
+		cbxTipoEvento.setModel(new DefaultComboBoxModel(new String[] { "Diaria", "Semanal" }));
 		cbxTipoEvento.setBounds(250, 128, 171, 18);
 		panel.add(cbxTipoEvento);
 
@@ -221,21 +218,21 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		JButton btnAñadirEvento = new JButton("Añadir Misión");
 		btnAñadirEvento.setText("Añadir Misión"); // Cámbiale el nombre al objeto si quieres
 		btnAñadirEvento.addActionListener(new ActionListener() {
-		    public void actionPerformed(ActionEvent e) {
-		        try {
-		            String desc = txtNombreEvento.getText();
-		            String tipo = cbxTipoEvento.getSelectedItem().toString();
-		            int recompensa = Integer.parseInt(txtPuntosEvento.getText());
+			public void actionPerformed(ActionEvent e) {
+				try {
+					String desc = txtNombreEvento.getText();
+					String tipo = cbxTipoEvento.getSelectedItem().toString();
+					int recompensa = Integer.parseInt(txtPuntosEvento.getText());
 
-		            if (miControlador.añadirMision(desc, tipo, recompensa)) {
-		                JOptionPane.showMessageDialog(null, "Misión guardada con éxito");
-		                txtNombreEvento.setText("");
-		                txtPuntosEvento.setText("");
-		            }
-		        } catch (NumberFormatException ex) {
-		            JOptionPane.showMessageDialog(null, "La recompensa debe ser un número");
-		        }
-		    }
+					if (miControlador.añadirMision(desc, tipo, recompensa)) {
+						JOptionPane.showMessageDialog(null, "Misión guardada con éxito");
+						txtNombreEvento.setText("");
+						txtPuntosEvento.setText("");
+					}
+				} catch (NumberFormatException ex) {
+					JOptionPane.showMessageDialog(null, "La recompensa debe ser un número");
+				}
+			}
 		});
 		btnAñadirEvento.setBounds(306, 303, 115, 34);
 		btnAñadirEvento.setBackground(GRIS_FONDO);
@@ -244,21 +241,21 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 
 		JButton btnEliminarEvento = new JButton("Eliminar Misión");
 		btnEliminarEvento.addActionListener(new ActionListener() {
-		    public void actionPerformed(ActionEvent e) {
-		        int fila = table.getSelectedRow();
-		        if (fila != -1) {
-		            // Recuperamos el ID (columna 0)
-		            int idMision = (int) table.getValueAt(fila, 0);
-		            String nombre = table.getValueAt(fila, 1).toString();
-		            
-		            int confirm = JOptionPane.showConfirmDialog(null, "¿Eliminar " + nombre + "?");
-		            if (confirm == JOptionPane.YES_OPTION) {
-		                if (miControlador.eliminarMision(idMision)) {
-		                    JOptionPane.showMessageDialog(null, "Misión eliminada");
-		                }
-		            }
-		        }
-		    }
+			public void actionPerformed(ActionEvent e) {
+				int fila = table.getSelectedRow();
+				if (fila != -1) {
+					// Recuperamos el ID (columna 0)
+					int idMision = (int) table.getValueAt(fila, 0);
+					String nombre = table.getValueAt(fila, 1).toString();
+
+					int confirm = JOptionPane.showConfirmDialog(null, "¿Eliminar " + nombre + "?");
+					if (confirm == JOptionPane.YES_OPTION) {
+						if (miControlador.eliminarMision(idMision)) {
+							JOptionPane.showMessageDialog(null, "Misión eliminada");
+						}
+					}
+				}
+			}
 		});
 		btnEliminarEvento.setBounds(91, 303, 135, 34);
 		btnEliminarEvento.setBackground(GRIS_FONDO);
@@ -285,13 +282,13 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		spinner.setModel(new SpinnerDateModel(new Date(1777240800000L), null, null, Calendar.DAY_OF_YEAR));
 		spinner.setBounds(250, 257, 171, 18);
 		panel.add(spinner);
-		
+
 		this.addComponentListener(new java.awt.event.ComponentAdapter() {
-	        @Override
-	        public void componentShown(java.awt.event.ComponentEvent ce) {
-	            cargarTablaMisiones(); 
-	        }
-	    });
+			@Override
+			public void componentShown(java.awt.event.ComponentEvent ce) {
+				cargarTablaMisiones();
+			}
+		});
 	}
 
 	// --- MÉTODOS DE SOPORTE PARA EL HEADER ---
@@ -327,44 +324,44 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 			}
 		});
 	}
-	
+
 	public void cargarTablaMisiones() {
-	    if (miControlador != null) {
-	        ArrayList<Object[]> datos = miControlador.getMisionesAdmin();
-	        // El modelo debe coincidir con: [ID, Misión, Tipo, Puntos]
-	        DefaultTableModel modelo = new DefaultTableModel(
-	            new Object[][] {},
-	            new String[] { "ID", "Misión", "Tipo", "Puntos" }
-	        ) {
-	            @Override
-	            public boolean isCellEditable(int r, int c) { return false; }
-	        };
+		if (miControlador != null) {
+			ArrayList<Object[]> datos = miControlador.getMisionesAdmin();
+			// El modelo debe coincidir con: [ID, Misión, Tipo, Puntos]
+			DefaultTableModel modelo = new DefaultTableModel(new Object[][] {},
+					new String[] { "ID", "Misión", "Tipo", "Puntos" }) {
+				@Override
+				public boolean isCellEditable(int r, int c) {
+					return false;
+				}
+			};
 
-	        for (Object[] fila : datos) {
-	            modelo.addRow(fila);
-	        }
-	        table.setModel(modelo);
+			for (Object[] fila : datos) {
+				modelo.addRow(fila);
+			}
+			table.setModel(modelo);
 
-	        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+			table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
-	        // Columna 0: ID (Oculta)
-	        table.getColumnModel().getColumn(0).setMinWidth(0);
-	        table.getColumnModel().getColumn(0).setMaxWidth(0);
-	        table.getColumnModel().getColumn(0).setPreferredWidth(0);
+			// Columna 0: ID (Oculta)
+			table.getColumnModel().getColumn(0).setMinWidth(0);
+			table.getColumnModel().getColumn(0).setMaxWidth(0);
+			table.getColumnModel().getColumn(0).setPreferredWidth(0);
 
-	        // Columna 1: Misión (Muy ancha)
-	        table.getColumnModel().getColumn(1).setPreferredWidth(160); // Ajusta según el tamaño de tu panel
+			// Columna 1: Misión (Muy ancha)
+			table.getColumnModel().getColumn(1).setPreferredWidth(160); // Ajusta según el tamaño de tu panel
 
-	        // Columna 2: Tipo (Fija)
-	        table.getColumnModel().getColumn(2).setMinWidth(80);
-	        table.getColumnModel().getColumn(2).setMaxWidth(80);
-	        table.getColumnModel().getColumn(2).setPreferredWidth(80);
+			// Columna 2: Tipo (Fija)
+			table.getColumnModel().getColumn(2).setMinWidth(80);
+			table.getColumnModel().getColumn(2).setMaxWidth(80);
+			table.getColumnModel().getColumn(2).setPreferredWidth(80);
 
-	        // Columna 3: Puntos (Fija)
-	        table.getColumnModel().getColumn(3).setMinWidth(60);
-	        table.getColumnModel().getColumn(3).setMaxWidth(60);
-	        table.getColumnModel().getColumn(3).setPreferredWidth(60);
-	    }
+			// Columna 3: Puntos (Fija)
+			table.getColumnModel().getColumn(3).setMinWidth(60);
+			table.getColumnModel().getColumn(3).setMaxWidth(60);
+			table.getColumnModel().getColumn(3).setPreferredWidth(60);
+		}
 	}
 
 	@Override
@@ -374,6 +371,6 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 
 	@Override
 	public void setControlador(Controlador miControlador) {
-	    this.miControlador = miControlador;
+		this.miControlador = miControlador;
 	}
 }
