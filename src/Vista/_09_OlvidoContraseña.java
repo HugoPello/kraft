@@ -150,6 +150,23 @@ public class _09_OlvidoContraseña extends JFrame implements Vista {
 		panelCentral.add(lblUsu);
 
 		txtUsu = new JTextField();
+		txtUsu.addFocusListener(new java.awt.event.FocusAdapter() {
+		    @Override
+		    public void focusLost(java.awt.event.FocusEvent e) {
+		        String usuario = txtUsu.getText().trim();
+		        if (!usuario.isEmpty() && miControlador != null) {
+		            String preguntaEncontrada = miControlador.recuperarPreguntaUsuario(usuario);
+		            
+		            if (preguntaEncontrada != null) {
+		                // Cambiamos el modelo del combo para que SOLO aparezca esa pregunta
+		                cbxPregunta.setModel(new DefaultComboBoxModel<>(new String[] { preguntaEncontrada }));
+		            } else {
+		                // Si el usuario no existe, volvemos al estado inicial
+		                cbxPregunta.setModel(new DefaultComboBoxModel<>(new String[] { "--Usuario no encontrado--" }));
+		            }
+		        }
+		    }
+		});
 		txtUsu.setBounds(799, 233, 250, 25);
 		panelCentral.add(txtUsu);
 
@@ -284,6 +301,10 @@ public class _09_OlvidoContraseña extends JFrame implements Vista {
 		txtNuevaPass.setText("");
 		txtConfirmPass.setText("");
 		cbxPregunta.setSelectedIndex(0);
+	}
+	
+	public String getPreguntaSeleccionada() {
+	    return (String) cbxPregunta.getSelectedItem();
 	}
 
 	@Override

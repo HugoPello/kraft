@@ -291,47 +291,52 @@ public class Controlador {
 	// 8. RECUPERACIÓN DE CONTRASEÑA Y PERFIL
 	// =========================================================================
 
+	// @Author: Hugo
 	public void restablecerContrasena() {
-		_09_OlvidoContraseña vista = (_09_OlvidoContraseña) misVistas[9];
+	    _09_OlvidoContraseña vista = (_09_OlvidoContraseña) misVistas[9];
 
-		String usr = vista.getUsuario();
-		int idPregunta = vista.getIndicePregunta();
-		String respuesta = vista.getRespuestaSeguridad();
-		String nuevaPass = vista.getNuevaPass();
-		String confirmPass = vista.getConfirmPass();
+	    String usr = vista.getUsuario().trim();
+	    String preguntaActual = vista.getPreguntaSeleccionada(); // Usa el nuevo getter
+	    String respuesta = vista.getRespuestaSeguridad().trim();
+	    String nuevaPass = vista.getNuevaPass();
+	    String confirmPass = vista.getConfirmPass();
 
-		if (usr.isEmpty() || respuesta.isEmpty() || nuevaPass.isEmpty()) {
-			vista.mostrarMensaje("Por favor, rellena todos los campos.");
-			return;
-		}
-		if (idPregunta == 0) {
-			vista.mostrarMensaje("Por favor, selecciona una pregunta de seguridad.");
-			return;
-		}
-		if (!nuevaPass.equals(confirmPass)) {
-			vista.mostrarMensaje("Las contraseñas no coinciden.");
-			return;
-		}
-		if (!miModelo.existeUsuario(usr)) {
-			vista.mostrarMensaje("El usuario indicado no existe.");
-			return;
-		}
+	    // 1. Validaciones básicas de campos vacíos
+	    if (usr.isEmpty() || respuesta.isEmpty() || nuevaPass.isEmpty()) {
+	        vista.mostrarMensaje("Por favor, rellena todos los campos.");
+	        return;
+	    }
 
-		// Comprobamos en el Modelo si la respuesta es correcta
-		boolean esCorrecta = miModelo.verificarRespuestaSeguridad(usr, idPregunta, respuesta);
+	    // 2. Validación de la pregunta cargada
+	    if (preguntaActual == null || preguntaActual.equals("--Seleccione una opción--") || 
+	        preguntaActual.equals("--Usuario no encontrado--")) {
+	        vista.mostrarMensaje("No se ha podido identificar una pregunta de seguridad válida para este usuario.");
+	        return;
+	    }
 
-		if (esCorrecta) {
-			int filasAfectadas = miModelo.modificar(usr, nuevaPass);
-			if (filasAfectadas > 0) {
-				vista.mostrarMensaje("Contraseña actualizada con éxito. Ya puedes iniciar sesión.");
-				vista.limpiarCampos();
-				cambiarVentana(9, 0); // Volver al login
-			} else {
-				vista.mostrarMensaje("Error al actualizar la contraseña en la base de datos.");
-			}
-		} else {
-			vista.mostrarMensaje("La respuesta a la pregunta de seguridad es incorrecta.");
-		}
+	    // 3. Validación de contraseñas iguales
+	    if (!nuevaPass.equals(confirmPass)) {
+	        vista.mostrarMensaje("Las contraseñas no coinciden.");
+	        return;
+	    }
+
+	    // 4. Verificación de seguridad en el Modelo
+	    // IMPORTANTE: Como ahora no sabemos el ID por el índice, el modelo debe 
+	    // verificar la respuesta simplemente por el nombre de usuario.
+	    boolean esCorrecta = miModelo.verificarRespuestaSoloPorUsuario(usr, respuesta);
+
+	    if (esCorrecta) {
+	        int filasAfectadas = miModelo.modificar(usr, nuevaPass);
+	        if (filasAfectadas > 0) {
+	            vista.mostrarMensaje("Contraseña actualizada con éxito. Ya puedes iniciar sesión.");
+	            vista.limpiarCampos();
+	            cambiarVentana(9, 0); // Volver al login
+	        } else {
+	            vista.mostrarMensaje("Error al actualizar la contraseña en la base de datos.");
+	        }
+	    } else {
+	        vista.mostrarMensaje("La respuesta a la pregunta de seguridad es incorrecta.");
+	    }
 	}
 
 	public void alAbrirPerfil() {
@@ -399,12 +404,26 @@ public class Controlador {
 	}
 
 	private void actualizarTodasLasTablas() {
-		if (misVistas[11] instanceof _11_PanelAdmin) {
-			((_11_PanelAdmin) misVistas[11]).llenarTabla();
-		}
-		if (misVistas[2] instanceof _02_Inicio) {
-			((_02_Inicio) misVistas[2]).cargarNoticias();
-		}
+	    try {
+	        // 1. Refrescar el Panel de Administración (Ventana 11)
+	        if (misVistas[11] instanceof _11_PanelAdmin) {
+	            ((_11_PanelAdmin) misVistas[11]).llenarTabla();
+	        }
+
+	        // 2. Refrescar el Inicio (Ventana 02)
+	        if (misVistas[2] instanceof _02_Inicio) {
+	            _02_Inicio inicio = (_02_Inicio) misVistas[2];
+	            inicio.cargarNoticias();
+	            inicio.cargarMisiones(); 
+	        }
+
+	        // 3. Refrescar la ventana de Crear Misiones (Ventana 10)
+	        if (misVistas[10] instanceof _10_CrearEventoAdmin) {
+	            ((_10_CrearEventoAdmin) misVistas[10]).cargarTablaMisiones();
+	        }
+	    } catch (Exception e) {
+	        System.err.println("Error en refresco global: " + e.getMessage());
+	    }
 	}
 
 	public ArrayList<Object[]> getMisiones(String tipo) {
@@ -422,7 +441,7 @@ public class Controlador {
 	public boolean añadirEvento(String nombre, String tipo, int puntos, String fecha) {
 		boolean exito = miModelo.insertarEvento(nombre, tipo, puntos, fecha);
 		if (exito) {
-			((_10_CrearEventoAdmin) misVistas[10]).cargarTablaEventos();
+			((_10_CrearEventoAdmin) misVistas[10]).cargarTablaMisiones();
 		}
 		return exito;
 	}
@@ -430,7 +449,7 @@ public class Controlador {
 	public boolean eliminarEvento(String nombre) {
 		boolean exito = miModelo.eliminarEvento(nombre);
 		if (exito) {
-			((_10_CrearEventoAdmin) misVistas[10]).cargarTablaEventos();
+			((_10_CrearEventoAdmin) misVistas[10]).cargarTablaMisiones();
 		}
 		return exito;
 	}
@@ -475,7 +494,7 @@ public class Controlador {
 	// =========================================================================
 
 	public Object[][] getRankingMundial() {
-		String sql = "SELECT USR, puntos FROM USERS ORDER BY puntos DESC LIMIT 10";
+		String sql = "SELECT USR, puntos FROM USERS ORDER BY puntos DESC LIMIT 50";
 		return miModelo.obtenerDatosTabla(sql, 2);
 	}
 
@@ -483,7 +502,7 @@ public class Controlador {
 		String sql = "SELECT CA.nombreUsuario, SUM(A.puntos) as puntos_semanales " + "FROM COMPLETAR_ACTIVIDAD CA "
 				+ "JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad "
 				+ "WHERE YEARWEEK(CA.fecha_realizacion, 1) = YEARWEEK(CURRENT_DATE(), 1) "
-				+ "GROUP BY CA.nombreUsuario " + "ORDER BY puntos_semanales DESC " + "LIMIT 10";
+				+ "GROUP BY CA.nombreUsuario " + "ORDER BY puntos_semanales DESC " + "LIMIT 50";
 		return miModelo.obtenerDatosTabla(sql, 2);
 	}
 
@@ -497,7 +516,7 @@ public class Controlador {
 	public Object[][] getRankingGrupalEspecifico(String nombreGrupo) {
 		String sql = "SELECT U.USR, U.puntos " + "FROM USERS U "
 				+ "JOIN PERTENECE_GRUPO PG ON U.USR = PG.nombreUsuario " + "JOIN GRUPO G ON PG.id_grupo = G.id_grupo "
-				+ "WHERE G.nombre = ? " + "ORDER BY U.puntos DESC LIMIT 10";
+				+ "WHERE G.nombre = ? " + "ORDER BY U.puntos DESC LIMIT 20";
 		return miModelo.obtenerDatosTabla(sql, 2, nombreGrupo);
 	}
 
@@ -840,4 +859,35 @@ public class Controlador {
 		return miModelo.eliminarLogroUsuario(usuario, logro);
 	}
 
+	public boolean eliminarMision(int id) {
+	    boolean exito = miModelo.eliminarMision(id);
+	    if (exito) actualizarTodasLasTablas();
+	    return exito;
+	}
+
+	public ArrayList<Object[]> getMisionesAdmin() {
+	    return miModelo.consultarMisionesAdmin();
+	}
+	
+	public void actualizarMisionesEnInicio() {
+	    if (misVistas[2] != null) {
+	        _02_Inicio inicio = (_02_Inicio) misVistas[2];
+	        inicio.cargarMisiones();
+	    }
+	}
+	
+	public boolean añadirMision(String desc, String tipo, int recompensa) {
+	    boolean exito = miModelo.insertarMision(desc, tipo, recompensa);
+	    if (exito) {
+	        actualizarTodasLasTablas(); // Avisamos a todas las ventanas del cambio
+	    }
+	    return exito;
+	}
+
+	public String recuperarPreguntaUsuario(String usuario) {
+		if (miModelo.getConexion() == null) {
+	        miModelo.conectarBD();
+	    }
+	    return miModelo.obtenerPreguntaDeUsuario(usuario);
+	}
 }

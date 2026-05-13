@@ -131,7 +131,7 @@ public class _02_Inicio extends JFrame implements Vista {
 	        public void componentShown(java.awt.event.ComponentEvent e) {
 	            if (miControlador != null) {
 	                cargarNoticias();
-	        		miControlador.gestionarMisionesDiarias(); 
+	        		cargarMisiones(); 
 	            }
 	        }
 	    });
@@ -237,21 +237,24 @@ public class _02_Inicio extends JFrame implements Vista {
 	}
 
 	public void cargarMisiones() {
-		if (miModelo != null && miModelo.getUsuarioLogueado() != null) {
-			String usr = miModelo.getUsuarioLogueado();
+	    if (miModelo != null && miModelo.getUsuarioLogueado() != null) {
+	        String usr = miModelo.getUsuarioLogueado();
 
-			// Cargar Diarias
-			ArrayList<Object[]> diarias = miModelo.obtenerMisionesHoy(usr, "Diaria");
-			modeloDiarias.setRowCount(0);
-			for (Object[] fila : diarias)
-				modeloDiarias.addRow(fila);
+	        // Diarias: Tipo = 'Diaria'
+	        ArrayList<Object[]> diarias = miModelo.obtenerMisionesHoy(usr, "Diaria");
+	        modeloDiarias.setRowCount(0);
+	        for (Object[] fila : diarias) {
+	            // Nota: El modelo debe devolver [Descripción, Estado, Recompensa]
+	            modeloDiarias.addRow(fila);
+	        }
 
-			// Cargar Semanales
-			ArrayList<Object[]> semanales = miModelo.obtenerMisionesHoy(usr, "Semanal");
-			modeloSemanales.setRowCount(0);
-			for (Object[] fila : semanales)
-				modeloSemanales.addRow(fila);
-		}
+	        // Semanales: Tipo = 'Semanal'
+	        ArrayList<Object[]> semanales = miModelo.obtenerMisionesHoy(usr, "Semanal");
+	        modeloSemanales.setRowCount(0);
+	        for (Object[] fila : semanales) {
+	            modeloSemanales.addRow(fila);
+	        }
+	    }
 	}
 
 	@Override

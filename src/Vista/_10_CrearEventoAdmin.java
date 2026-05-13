@@ -160,7 +160,7 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		table.setModel(
 				new DefaultTableModel(
 						new Object[][] { },
-						new String[] { "Evento", "Tipo", "Puntos" }) {
+						new String[] { "Misión", "Tipo", "Puntos" }) {
 					// Con esto se bloquea la edición de celdas
 					@Override
 					public boolean isCellEditable(int row, int column) {
@@ -176,7 +176,7 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		table.setBackground(GRIS_FONDO);
 		scrollPane.setViewportView(table);
 
-		JLabel lblNombreEvento = new JLabel("Nombre del evento:");
+		JLabel lblNombreEvento = new JLabel("Nombre de la misión");
 		lblNombreEvento.setBounds(250, 39, 149, 12);
 		lblNombreEvento.setForeground(NARANJA);
 		panel.add(lblNombreEvento);
@@ -186,17 +186,17 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		panel.add(txtNombreEvento);
 		txtNombreEvento.setColumns(10);
 
-		JLabel lblTipoEvento = new JLabel("Tipo de Evento:");
+		JLabel lblTipoEvento = new JLabel("Tipo de Misión");
 		lblTipoEvento.setBounds(250, 106, 135, 12);
 		lblTipoEvento.setForeground(NARANJA);
 		panel.add(lblTipoEvento);
 
 		JComboBox cbxTipoEvento = new JComboBox();
-		cbxTipoEvento.setModel(new DefaultComboBoxModel(new String[] { "Actividad", "Hábito" }));
+		cbxTipoEvento.setModel(new DefaultComboBoxModel(new String[] {"Diaria", "Semanal"}));
 		cbxTipoEvento.setBounds(250, 128, 171, 18);
 		panel.add(cbxTipoEvento);
 
-		JLabel lblPuntosEvento = new JLabel("Puntos del Evento:");
+		JLabel lblPuntosEvento = new JLabel("Puntos de la Misión");
 		lblPuntosEvento.setBounds(250, 172, 171, 12);
 		lblPuntosEvento.setForeground(NARANJA);
 		panel.add(lblPuntosEvento);
@@ -206,27 +206,22 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		panel.add(txtPuntosEvento);
 		txtPuntosEvento.setColumns(10);
 
-		JButton btnAñadirEvento = new JButton("Añadir evento");
+		JButton btnAñadirEvento = new JButton("Añadir Misión");
+		btnAñadirEvento.setText("Añadir Misión"); // Cámbiale el nombre al objeto si quieres
 		btnAñadirEvento.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
 		        try {
-		            String nombre = txtNombreEvento.getText();
+		            String desc = txtNombreEvento.getText();
 		            String tipo = cbxTipoEvento.getSelectedItem().toString();
-		            int puntos = Integer.parseInt(txtPuntosEvento.getText());
-		            
-		            // Extraer y formatear fecha del Spinner
-		            java.util.Date date = (java.util.Date) spinner.getValue();
-		            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		            String fechaSQL = sdf.format(date);
+		            int recompensa = Integer.parseInt(txtPuntosEvento.getText());
 
-		            if (miControlador.añadirEvento(nombre, tipo, puntos, fechaSQL)) {
-		                JOptionPane.showMessageDialog(null, "Evento añadido con éxito");
-		                // Limpiar campos
+		            if (miControlador.añadirMision(desc, tipo, recompensa)) {
+		                JOptionPane.showMessageDialog(null, "Misión guardada con éxito");
 		                txtNombreEvento.setText("");
 		                txtPuntosEvento.setText("");
 		            }
 		        } catch (NumberFormatException ex) {
-		            JOptionPane.showMessageDialog(null, "Los puntos deben ser un número válido");
+		            JOptionPane.showMessageDialog(null, "La recompensa debe ser un número");
 		        }
 		    }
 		});
@@ -235,23 +230,21 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		btnAñadirEvento.setForeground(NARANJA);
 		panel.add(btnAñadirEvento);
 
-		JButton btnEliminarEvento = new JButton("Eliminar Evento");
+		JButton btnEliminarEvento = new JButton("Eliminar Misión");
 		btnEliminarEvento.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
 		        int fila = table.getSelectedRow();
 		        if (fila != -1) {
-		            String nombre = table.getValueAt(fila, 0).toString();
-		            int confirm = JOptionPane.showConfirmDialog(null, "¿Eliminar " + nombre + "?");
+		            // Recuperamos el ID (columna 0)
+		            int idMision = (int) table.getValueAt(fila, 0);
+		            String nombre = table.getValueAt(fila, 1).toString();
 		            
+		            int confirm = JOptionPane.showConfirmDialog(null, "¿Eliminar " + nombre + "?");
 		            if (confirm == JOptionPane.YES_OPTION) {
-		                if (miControlador.eliminarEvento(nombre)) {
-		                    JOptionPane.showMessageDialog(null, "Evento eliminado");
-		                } else {
-		                    JOptionPane.showMessageDialog(null, "No se pudo eliminar");
+		                if (miControlador.eliminarMision(idMision)) {
+		                    JOptionPane.showMessageDialog(null, "Misión eliminada");
 		                }
 		            }
-		        } else {
-		            JOptionPane.showMessageDialog(null, "Selecciona un evento de la tabla");
 		        }
 		    }
 		});
@@ -271,7 +264,7 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		btnVolverPanel.setForeground(NARANJA);
 		panel.add(btnVolverPanel);
 
-		JLabel lblFechaEvento = new JLabel("Fecha del Evento:");
+		JLabel lblFechaEvento = new JLabel("Fecha Límite");
 		lblFechaEvento.setBounds(250, 235, 149, 12);
 		lblFechaEvento.setForeground(NARANJA);
 		panel.add(lblFechaEvento);
@@ -284,7 +277,7 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		this.addComponentListener(new java.awt.event.ComponentAdapter() {
 	        @Override
 	        public void componentShown(java.awt.event.ComponentEvent ce) {
-	            cargarTablaEventos(); 
+	            cargarTablaMisiones(); 
 	        }
 	    });
 	}
@@ -323,19 +316,26 @@ public class _10_CrearEventoAdmin extends JFrame implements Vista {
 		});
 	}
 	
-	public void cargarTablaEventos() {
-		if (miControlador != null) {
-	        try {
-	            ArrayList<Object[]> datos = miControlador.getEventos();
-	            DefaultTableModel modelo = (DefaultTableModel) table.getModel();
+	public void cargarTablaMisiones() {
+	    if (miControlador != null) {
+	        ArrayList<Object[]> datos = miControlador.getMisionesAdmin();
+	        // El modelo debe coincidir con: [ID, Misión, Tipo, Puntos]
+	        DefaultTableModel modelo = new DefaultTableModel(
+	            new Object[][] {},
+	            new String[] { "ID", "Misión", "Tipo", "Puntos" }
+	        ) {
+	            @Override
+	            public boolean isCellEditable(int r, int c) { return false; }
+	        };
 
-	            modelo.setRowCount(0); 
-	            for (Object[] fila : datos) {
-	                modelo.addRow(fila);
-	            }
-	        } catch (Exception ex) {
-	            System.err.println("Error al refrescar eventos: " + ex.getMessage());
+	        for (Object[] fila : datos) {
+	            modelo.addRow(fila);
 	        }
+	        table.setModel(modelo);
+
+	        table.getColumnModel().getColumn(0).setMinWidth(0);
+	        table.getColumnModel().getColumn(0).setMaxWidth(0);
+	        table.getColumnModel().getColumn(0).setPreferredWidth(0);
 	    }
 	}
 
