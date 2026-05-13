@@ -2,10 +2,27 @@
 //@Autor : Diego / Carlos
 package Vista;
 
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.border.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 import Controlador.Controlador;
 import Modelo.Modelo;
@@ -21,6 +38,7 @@ public class _03_Actividades extends JFrame implements Vista {
 	// Botones del Header
 	private JButton btnCerrar, btnMin;
 	private JButton btnHome, btnPerfil, btnActividades, btnAjustes, btnTrofeo, btnCarrito;
+	private JProgressBar prog_1, prog_2, prog_3, prog_4, prog_5;
 
 	private Controlador miControlador;
 	private Modelo miModelo;
@@ -127,13 +145,13 @@ public class _03_Actividades extends JFrame implements Vista {
 		// EVENTO AÑADIDO
 		btnMontana.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(miControlador != null) miControlador.abrirActividadEspecifica("Montaña");
+				if (miControlador != null)
+					miControlador.abrirActividadEspecifica("Montaña");
 			}
 		});
 		panel_1.add(btnMontana, BorderLayout.CENTER);
-		JProgressBar prog_1 = new JProgressBar();
+		prog_1 = new JProgressBar(); // Sin la palabra JProgressBar delante
 		prog_1.setForeground(new Color(128, 255, 0));
-		prog_1.setValue(0);
 		prog_1.setPreferredSize(new Dimension(0, 30));
 		panel_1.add(prog_1, BorderLayout.SOUTH);
 		panelCentro.add(panel_1);
@@ -149,13 +167,13 @@ public class _03_Actividades extends JFrame implements Vista {
 		// EVENTO AÑADIDO
 		btnAgua.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(miControlador != null) miControlador.abrirActividadEspecifica("Agua");
+				if (miControlador != null)
+					miControlador.abrirActividadEspecifica("Agua");
 			}
 		});
 		panel_2.add(btnAgua, BorderLayout.CENTER);
-		JProgressBar prog_2 = new JProgressBar();
+		prog_2 = new JProgressBar(); // Sin la palabra JProgressBar delante
 		prog_2.setForeground(new Color(128, 255, 0));
-		prog_2.setValue(60);
 		prog_2.setPreferredSize(new Dimension(0, 30));
 		panel_2.add(prog_2, BorderLayout.SOUTH);
 		panelCentro.add(panel_2);
@@ -171,13 +189,13 @@ public class _03_Actividades extends JFrame implements Vista {
 		// EVENTO AÑADIDO
 		btnCancha.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(miControlador != null) miControlador.abrirActividadEspecifica("Cancha");
+				if (miControlador != null)
+					miControlador.abrirActividadEspecifica("Cancha");
 			}
 		});
 		panel_3.add(btnCancha, BorderLayout.CENTER);
-		JProgressBar prog_3 = new JProgressBar();
+		prog_3 = new JProgressBar(); // Sin la palabra JProgressBar delante
 		prog_3.setForeground(new Color(128, 255, 0));
-		prog_3.setValue(10);
 		prog_3.setPreferredSize(new Dimension(0, 30));
 		panel_3.add(prog_3, BorderLayout.SOUTH);
 		panelCentro.add(panel_3);
@@ -193,13 +211,13 @@ public class _03_Actividades extends JFrame implements Vista {
 		// EVENTO AÑADIDO
 		btnDieta.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(miControlador != null) miControlador.abrirActividadEspecifica("Dieta");
+				if (miControlador != null)
+					miControlador.abrirActividadEspecifica("Dieta");
 			}
 		});
 		panel_4.add(btnDieta, BorderLayout.CENTER);
-		JProgressBar prog_4 = new JProgressBar();
+		prog_4 = new JProgressBar(); // Sin la palabra JProgressBar delante
 		prog_4.setForeground(new Color(128, 255, 0));
-		prog_4.setValue(50);
 		prog_4.setPreferredSize(new Dimension(0, 30));
 		panel_4.add(prog_4, BorderLayout.SOUTH);
 		panelCentro.add(panel_4);
@@ -215,13 +233,13 @@ public class _03_Actividades extends JFrame implements Vista {
 		// EVENTO AÑADIDO
 		btnRunning.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(miControlador != null) miControlador.abrirActividadEspecifica("Running");
+				if (miControlador != null)
+					miControlador.abrirActividadEspecifica("Running");
 			}
 		});
 		panel_5.add(btnRunning, BorderLayout.CENTER);
-		JProgressBar prog_5 = new JProgressBar();
+		prog_5 = new JProgressBar(); // Sin la palabra JProgressBar delante
 		prog_5.setForeground(new Color(128, 255, 0));
-		prog_5.setValue(22);
 		prog_5.setPreferredSize(new Dimension(0, 30));
 		panel_5.add(prog_5, BorderLayout.SOUTH);
 		panelCentro.add(panel_5);
@@ -313,6 +331,15 @@ public class _03_Actividades extends JFrame implements Vista {
 		return panel;
 	}
 
+	public void cargarBarrasDeProgreso() {
+		// Pedimos los porcentajes al modelo y actualizamos
+		prog_1.setValue(miModelo.getPorcentajeCategoria(miModelo.getUsuarioLogueado(), "Montaña"));
+		prog_2.setValue(miModelo.getPorcentajeCategoria(miModelo.getUsuarioLogueado(), "Agua"));
+		prog_3.setValue(miModelo.getPorcentajeCategoria(miModelo.getUsuarioLogueado(), "Cancha"));
+		prog_4.setValue(miModelo.getPorcentajeCategoria(miModelo.getUsuarioLogueado(), "Dieta"));
+		prog_5.setValue(miModelo.getPorcentajeCategoria(miModelo.getUsuarioLogueado(), "Running"));
+	}
+
 	@Override
 	public void setModelo(Modelo miModelo) {
 		this.miModelo = miModelo;
@@ -321,6 +348,15 @@ public class _03_Actividades extends JFrame implements Vista {
 	@Override
 	public void setControlador(Controlador miControlador) {
 		this.miControlador = miControlador;
+
+		this.addComponentListener(new ComponentAdapter() {
+			@Override
+			public void componentShown(ComponentEvent e) {
+				if (miModelo != null && miModelo.getUsuarioLogueado() != null) {
+					cargarBarrasDeProgreso();
+				}
+			}
+		});
 	}
 
 }
