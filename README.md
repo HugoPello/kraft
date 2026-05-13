@@ -1,7 +1,6 @@
 # 🚀 KRAFT | Plataforma Integral de Gamificación Saludable
 
 <div align="center">
-  <img src="https://via.placeholder.com/1000x300/121212/ff8000?text=KRAFT+-+HEALTH+%26+HABITS+ECOSYSTEM" alt="Kraft Banner">
 
   [![Java SE 21](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
   [![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
