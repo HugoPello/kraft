@@ -2,7 +2,7 @@
  * Clase que gestiona la lógica de negocio y la persistencia de datos.
  * Se comunica con la base de datos MySQL mediante JDBC y gestiona el estado
  * de la sesión del usuario.
- * * @author Hugo
+ * @author Hugo
  * @version 1.0
  */
 
@@ -19,8 +19,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-
-import com.mysql.cj.jdbc.CallableStatement;
 
 import Vista.Vista;
 
@@ -107,20 +105,18 @@ public class Modelo {
 	/**
 	 * Establece la conexión física con el servidor de base de datos MySQL. Carga el
 	 * driver JDBC dinámicamente y utiliza las credenciales obtenidas del archivo de
-	 * configuración para abrir un socket de comunicación. * @return true si la
-	 * conexión se establece o ya estaba abierta; false si hay error de red o
-	 * credenciales.
+	 * configuración para abrir un socket de comunicación. 
+	 * @return true si la conexión se establece o ya estaba abierta; false si hay
+	 * error de red o credenciales.
 	 */
 	public boolean conectarBD() {
 		try {
 			System.out.println("Conectando a: " + url);
 
-			// Verificación de estado: Solo intentamos conectar si la conexión es nula o se
-			// ha cerrado
+			// Verificación de estado: Solo intentamos conectar si la conexión es nula o se ha cerrado
 			if (conexion == null || conexion.isClosed()) {
 				Class.forName("com.mysql.cj.jdbc.Driver");
-				// Intento de autenticación mediante el DriverManager utilizando la URL y
-				// credenciales del .ini
+				// Intento de autenticación mediante el DriverManager utilizando la URL y credenciales del .ini
 				conexion = DriverManager.getConnection(url, login, pwdDB);
 				System.out.println("-> Conexión establecida");
 			}
@@ -209,10 +205,10 @@ public class Modelo {
 	/**
 	 * Motor de consulta genérico para obtener datos de una columna específica.
 	 * Utiliza Varargs para permitir un número dinámico de parámetros en el
-	 * PreparedStatement. * @param query Sentencia SQL con marcadores '?'
-	 * 
+	 * PreparedStatement.
+	 * * @param query Sentencia SQL con marcadores '?'
 	 * @param nombreColumna Etiqueta de la columna a extraer
-	 * @param parametros    Valores para inyectar en los marcadores de la query
+	 * @param parametros Valores para inyectar en los marcadores de la query
 	 * @return Array de String con los resultados o mensaje de "No hay datos"
 	 */
 	public String[] obtenerDatosColumna(String query, String nombreColumna, Object... parametros) {
@@ -245,10 +241,6 @@ public class Modelo {
 		return listaDatos.toArray(new String[0]);
 	}
 
-	/**
-	 * Obtiene la lista de nombres de logros desbloqueados por un usuario. d
-	 * * @return ArrayList con los nombres de los logros.
-	 */
 	public ArrayList<String> obtenerLogrosUsuario(String usuario) {
 		ArrayList<String> logros = new ArrayList<>();
 		String sql = "SELECT L.nombre FROM LOGROS L " + "JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro "
@@ -263,6 +255,17 @@ public class Modelo {
 			System.err.println("Error al obtener logros: " + e.getMessage());
 		}
 		return logros;
+	}
+
+	public Object[][] obtenerLogrosPendientes(String usuario) {
+		// Esta consulta vincula LOGROS con el progreso del usuario actual.
+		// COALESCE pone 0 si el usuario aún no ha empezado el logro.
+		// El WHERE asegura que el logro DESAPAREZCA si ya está hecho (esta_hecho = 1).
+		String sql = "SELECT L.nombre, L.descripcion, L.puntos_logros, COALESCE(HL.progreso, 0) " + "FROM LOGROS L "
+				+ "LEFT JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro AND HL.nombreUsuario = ? "
+				+ "WHERE HL.esta_hecho IS NULL OR HL.esta_hecho = 0";
+
+		return obtenerDatosTabla(sql, 4, usuario);
 	}
 
 	public ArrayList<String> obtenerTodosLosLogros() {
@@ -321,8 +324,7 @@ public class Modelo {
 	/**
 	 * Realiza un login adaptativo. Detecta si el usuario requiere 2FA (tiene email)
 	 * o si es una cuenta antigua.
-	 * 
-	 * @return "OTP_ENVIADO", "LOGIN_DIRECTO" o "INCORRECTO"
+	 * * @return "OTP_ENVIADO", "LOGIN_DIRECTO" o "INCORRECTO"
 	 */
 	public String loginSeguro(String usr, String pwd) {
 		// 1. Buscamos al usuario sin filtrar por is_verified aún para permitir acceso a
@@ -365,6 +367,9 @@ public class Modelo {
 				return "INCORRECTO";
 			}
 		} catch (SQLException e) {
+			System.err.println("=== ERROR SQL EN LOGIN ===");
+			e.printStackTrace();
+			resultado = "ErrorBD";
 			System.err.println("Error en Login Adaptativo: " + e.getMessage());
 			return "ERROR_BD";
 		}
@@ -373,9 +378,9 @@ public class Modelo {
 	/**
 	 * Realiza un registro atómico del usuario utilizando transacciones SQL.
 	 * Garantiza que el usuario no se cree si falla la inserción en la tabla de
-	 * seguridad. * @param usr Nombre de identificación único
-	 * 
-	 * @param pwd    Contraseña (texto plano por requerimiento de proyecto)
+	 * seguridad. 
+	 * @param usr Nombre de identificación único
+	 * @param pwd Contraseña (texto plano por requerimiento de proyecto)
 	 * @param correo Dirección de email para el sistema 2FA
 	 * @return true si el commit se realizó con éxito; false si hubo rollback
 	 */
@@ -384,8 +389,7 @@ public class Modelo {
 		try {
 			conexion.setAutoCommit(false); // Iniciamos transacción
 
-			// 1. Insertamos en USERS incluyendo el correo y el estado de verificación
-			// inicial
+			// 1. Insertamos en USERS incluyendo el correo y el estado de verificación inicial
 			String query1 = "INSERT INTO USERS (USR, PWD, ROL, correo, fechaNacimiento, is_verified) VALUES (?, ?, ?, ?, ?, 0)";
 			PreparedStatement ps1 = conexion.prepareStatement(query1);
 			ps1.setString(1, usr);
@@ -443,9 +447,8 @@ public class Modelo {
 	/**
 	 * Inserta un nuevo usuario en el sistema con permisos de usuario estándar (ROL
 	 * = false). Este método es utilizado por el panel de administración para el
-	 * alta manual de cuentas. * @param usr Nombre de usuario único para el nuevo
-	 * registro.
-	 * 
+	 * alta manual de cuentas. 
+	 * @param usr Nombre de usuario único para el nuevo registro.
 	 * @param pwd Contraseña asociada a la cuenta.
 	 * @return true si el usuario se insertó correctamente; false si hubo un error.
 	 */
@@ -539,136 +542,194 @@ public class Modelo {
 	// =========================================================================
 
 	public int getPorcentajeCategoria(String usr, String tipo) {
-		String sqlHechas = "SELECT COUNT(DISTINCT CA.id_actividad) FROM COMPLETAR_ACTIVIDAD CA JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad WHERE CA.nombreUsuario = ? AND A.tipo = ?";
-		String sqlTotal = "SELECT COUNT(*) FROM ACTIVIDADES WHERE tipo = ?";
-		try {
-			int hechas = 0, total = 0;
+	    // Subconsulta: Solo cuenta las actividades cuya suma de progreso haya superado su meta
+	    String sqlHechas = "SELECT COUNT(*) FROM ( "
+	                     + "  SELECT CA.id_actividad FROM COMPLETAR_ACTIVIDAD CA "
+	                     + "  JOIN ACTIVIDADES A ON CA.id_actividad = A.id_actividad "
+	                     + "  WHERE CA.nombreUsuario = ? AND A.tipo = ? "
+	                     + "  GROUP BY CA.id_actividad, A.meta_cantidad "
+	                     + "  HAVING SUM(CA.cantidad) >= A.meta_cantidad "
+	                     + ") as completadas";
+	                     
+	    String sqlTotal = "SELECT COUNT(*) FROM ACTIVIDADES WHERE tipo = ?";
+	    
+	    try {
+	        int hechas = 0, total = 0;
 
-			PreparedStatement ps1 = conexion.prepareStatement(sqlHechas);
-			ps1.setString(1, usr);
-			ps1.setString(2, tipo);
-			ResultSet rs1 = ps1.executeQuery();
-			if (rs1.next())
-				hechas = rs1.getInt(1);
+	        PreparedStatement ps1 = conexion.prepareStatement(sqlHechas);
+	        ps1.setString(1, usr);
+	        ps1.setString(2, tipo);
+	        ResultSet rs1 = ps1.executeQuery();
+	        if (rs1.next()) hechas = rs1.getInt(1);
 
-			PreparedStatement ps2 = conexion.prepareStatement(sqlTotal);
-			ps2.setString(1, tipo);
-			ResultSet rs2 = ps2.executeQuery();
-			if (rs2.next())
-				total = rs2.getInt(1);
+	        PreparedStatement ps2 = conexion.prepareStatement(sqlTotal);
+	        ps2.setString(1, tipo);
+	        ResultSet rs2 = ps2.executeQuery();
+	        if (rs2.next()) total = rs2.getInt(1);
 
-			if (total == 0)
-				return 0;
-			return (int) ((hechas * 100.0) / total);
-		} catch (SQLException e) {
-			return 0;
-		}
+	        if (total == 0) return 0;
+	        // Se calcula el porcentaje exacto de actividades completadas sobre las disponibles
+	        return (int) ((hechas * 100.0) / total);
+	    } catch (SQLException e) {
+	        System.err.println("Error al calcular porcentaje de categoría: " + e.getMessage());
+	        return 0;
+	    }
 	}
 
 	public boolean crearActividad(String nombre, String tipo, String dificultad, int puntos, String frecuencia,
-			String unidad, double meta) {
-		try {
-			conexion.setAutoCommit(false);
+	            String unidad, double meta, String categoria) { 
+	    try {
+	        conexion.setAutoCommit(false);
 
-			String sqlActividad = "INSERT INTO ACTIVIDADES (nombre, tipo, dificultad, puntos, frecuencia, unidad_medida, meta_cantidad) VALUES (?, ?, ?, ?, ?, ?, ?)";
-			PreparedStatement ps1 = conexion.prepareStatement(sqlActividad, java.sql.Statement.RETURN_GENERATED_KEYS);
-			ps1.setString(1, nombre);
-			ps1.setString(2, tipo);
-			ps1.setString(3, dificultad);
-			ps1.setInt(4, puntos);
-			ps1.setString(5, frecuencia);
-			ps1.setString(6, unidad);
-			ps1.setDouble(7, meta);
-			ps1.executeUpdate();
+	        // Añadimos 'categoria' a las columnas y un '?' extra al final
+	        String sqlActividad = "INSERT INTO ACTIVIDADES (nombre, tipo, dificultad, puntos, frecuencia, unidad_medida, meta_cantidad, categoria) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+	        PreparedStatement ps1 = conexion.prepareStatement(sqlActividad, java.sql.Statement.RETURN_GENERATED_KEYS);
+	        ps1.setString(1, nombre);
+	        ps1.setString(2, tipo);
+	        ps1.setString(3, dificultad);
+	        ps1.setInt(4, puntos);
+	        ps1.setString(5, frecuencia);
+	        ps1.setString(6, unidad);
+	        ps1.setDouble(7, meta);
+	        ps1.setString(8, categoria); // Inyectamos la palabra clave (ej. "WALK")
+	        ps1.executeUpdate();
 
-			ResultSet rsActividad = ps1.getGeneratedKeys();
-			int idActividad = -1;
-			if (rsActividad.next())
-				idActividad = rsActividad.getInt(1);
-			ps1.close();
+	        ResultSet rsActividad = ps1.getGeneratedKeys();
+	        int idActividad = -1;
+	        if (rsActividad.next())
+	            idActividad = rsActividad.getInt(1);
+	        ps1.close();
 
-			String descMision = "Hacer " + meta + " " + unidad + " de " + nombre;
-			int recompensaMision = puntos * 2;
-			String tipoMision = (frecuencia.equalsIgnoreCase("Semanal")) ? "Semanal" : "Diaria";
+	        String descMision = "Hacer " + meta + " " + unidad + " de " + nombre;
+	        int recompensaMision = puntos * 2;
+	        String tipoMision = (frecuencia.equalsIgnoreCase("Semanal")) ? "Semanal" : "Diaria";
 
-			String sqlMision = "INSERT INTO MISIONES (descripcion, recompensa, tipo) VALUES (?, ?, ?)";
-			PreparedStatement ps2 = conexion.prepareStatement(sqlMision, java.sql.Statement.RETURN_GENERATED_KEYS);
-			ps2.setString(1, descMision);
-			ps2.setInt(2, recompensaMision);
-			ps2.setString(3, tipoMision);
-			ps2.executeUpdate();
+	        String sqlMision = "INSERT INTO MISIONES (descripcion, recompensa, tipo) VALUES (?, ?, ?)";
+	        PreparedStatement ps2 = conexion.prepareStatement(sqlMision, java.sql.Statement.RETURN_GENERATED_KEYS);
+	        ps2.setString(1, descMision);
+	        ps2.setInt(2, recompensaMision);
+	        ps2.setString(3, tipoMision);
+	        ps2.executeUpdate();
 
-			ResultSet rsMision = ps2.getGeneratedKeys();
-			int idMision = -1;
-			if (rsMision.next())
-				idMision = rsMision.getInt(1);
-			ps2.close();
+	        ResultSet rsMision = ps2.getGeneratedKeys();
+	        int idMision = -1;
+	        if (rsMision.next())
+	            idMision = rsMision.getInt(1);
+	        ps2.close();
 
-			if (idActividad != -1 && idMision != -1) {
-				String sqlPuente = "INSERT INTO MISION_ACTIVIDAD (id_mision, id_actividad, cantidad_requerida) VALUES (?, ?, ?)";
-				PreparedStatement ps3 = conexion.prepareStatement(sqlPuente);
-				ps3.setInt(1, idMision);
-				ps3.setInt(2, idActividad);
-				ps3.setDouble(3, meta);
-				ps3.executeUpdate();
-				ps3.close();
-			}
+	        if (idActividad != -1 && idMision != -1) {
+	            String sqlPuente = "INSERT INTO MISION_ACTIVIDAD (id_mision, id_actividad, cantidad_requerida) VALUES (?, ?, ?)";
+	            PreparedStatement ps3 = conexion.prepareStatement(sqlPuente);
+	            ps3.setInt(1, idMision);
+	            ps3.setInt(2, idActividad);
+	            ps3.setDouble(3, meta);
+	            ps3.executeUpdate();
+	            ps3.close();
+	        }
 
-			conexion.commit();
-			return true;
+	        conexion.commit();
+	        return true;
 
-		} catch (SQLException e) {
-			System.err.println("Error en el Combo 3x1 de Crear Actividad: " + e.getMessage());
-			try {
-				conexion.rollback();
-			} catch (SQLException ex) {
-			}
-			return false;
-		} finally {
-			try {
-				conexion.setAutoCommit(true);
-			} catch (SQLException ex) {
-			}
-		}
+	    } catch (SQLException e) {
+	        System.err.println("Error en el Combo 3x1 de Crear Actividad: " + e.getMessage());
+	        try {
+	            conexion.rollback();
+	        } catch (SQLException ex) {
+	        }
+	        return false;
+	    } finally {
+	        try {
+	            conexion.setAutoCommit(true);
+	        } catch (SQLException ex) {
+	        }
+	    }
 	}
 
 	/**
-	 * Registra la finalización de una actividad por parte de un usuario específico.
-	 * El método realiza una búsqueda previa del ID de la actividad basándose en su
-	 * nombre para asegurar la integridad referencial antes de insertar el registro
-	 * en el historial. * @param usr El nombre del usuario que completa la acción.
-	 * 
-	 * @param nombreActividad El nombre legible de la actividad realizada.
-	 * @param cantidad        La cantidad registrada por el usuario para sumar al
-	 *                        progreso.
-	 * @return true si se encontró la actividad y se registró el progreso; false en
-	 *         caso contrario.
+	 * Registra una actividad realizada y actualiza automáticamente el progreso
+	 * de todos los logros vinculados a su categoría.
 	 */
 	public boolean registrarActividadCompletada(String usr, String nombreActividad, double cantidad) {
-		try {
-			int idActividad = -1;
+	    try {
+	        // 1. Buscamos el ID y la CATEGORÍA de la actividad
+	        String sqlInfo = "SELECT id_actividad, categoria FROM ACTIVIDADES WHERE nombre = ?";
+	        PreparedStatement psInfo = conexion.prepareStatement(sqlInfo);
+	        psInfo.setString(1, nombreActividad);
+	        ResultSet rsInfo = psInfo.executeQuery();
+	        
+	        if (rsInfo.next()) {
+	            int idActividad = rsInfo.getInt("id_actividad");
+	            String categoriaActividad = rsInfo.getString("categoria");
+	            
+	            // 2. Insertamos la actividad en el historial
+	            PreparedStatement ps2 = conexion.prepareStatement(
+	                    "INSERT INTO COMPLETAR_ACTIVIDAD (nombreUsuario, id_actividad, cantidad) VALUES (?, ?, ?)");
+	            ps2.setString(1, usr);
+	            ps2.setInt(2, idActividad);
+	            ps2.setDouble(3, cantidad);
+	            ps2.executeUpdate();
 
-			// Obtenemos el ID numérico asociado al nombre de la actividad.
-			PreparedStatement ps1 = conexion.prepareStatement("SELECT id_actividad FROM ACTIVIDADES WHERE nombre = ?");
-			ps1.setString(1, nombreActividad);
-			ResultSet rs = ps1.executeQuery();
-			if (rs.next())
-				idActividad = rs.getInt("id_actividad");
-			ps1.close();
+	            // 3. ¡VINCULACIÓN PERFECTA! (Soluciona el problema de la fila fantasma)
+	            // Primero, buscamos qué logros piden esta categoría
+	            String sqlLogros = "SELECT id_logro, meta_objetivo FROM LOGROS WHERE categoria = ?";
+	            PreparedStatement psBusqueda = conexion.prepareStatement(sqlLogros);
+	            psBusqueda.setString(1, categoriaActividad);
+	            ResultSet rsLogros = psBusqueda.executeQuery();
 
-			// Si el ID existe, registramos la relación en la tabla intermedia.
-			if (idActividad != -1) {
-				// Se asocia el usuario logueado con la actividad mediante sus llaves foráneas.
-				PreparedStatement ps2 = conexion.prepareStatement(
-						"INSERT INTO COMPLETAR_ACTIVIDAD (nombreUsuario, id_actividad, cantidad) VALUES (?, ?, ?)");
-				ps2.setString(1, usr);
-				ps2.setInt(2, idActividad);
-				ps2.setDouble(3, cantidad);
-				return ps2.executeUpdate() > 0;
-			}
-		} catch (SQLException e) {
-		}
-		return false;
+	            // Preparamos la consulta que INSERTA o ACTUALIZA dependiendo de si el usuario es nuevo
+	            String sqlUpsert = "INSERT INTO HACER_LOGRO (nombreUsuario, id_logro, progreso, esta_hecho) " +
+	                               "VALUES (?, ?, LEAST(100, ?), IF(? >= 100, 1, 0)) " +
+	                               "ON DUPLICATE KEY UPDATE " +
+	                               "progreso = LEAST(100, progreso + ?), " +
+	                               "esta_hecho = IF(progreso >= 100, 1, 0), " +
+	                               "fecha_desbloqueo = IF(progreso >= 100 AND fecha_desbloqueo IS NULL, CURRENT_DATE, fecha_desbloqueo)";
+	            
+	            PreparedStatement psUpsert = conexion.prepareStatement(sqlUpsert);
+	            
+	            // Recorremos todos los logros afectados y les sumamos el progreso
+	            while(rsLogros.next()) {
+	                int idLog = rsLogros.getInt("id_logro");
+	                double meta = rsLogros.getDouble("meta_objetivo");
+	                
+	                // Calculamos cuánto porcentaje equivale la cantidad realizada
+	                double porcentajeSumar = (cantidad / meta) * 100.0;
+	                
+	                // Rellenamos los parámetros (4 para el INSERT, 1 para el UPDATE)
+	                psUpsert.setString(1, usr);
+	                psUpsert.setInt(2, idLog);
+	                psUpsert.setDouble(3, porcentajeSumar);
+	                psUpsert.setDouble(4, porcentajeSumar);
+	                psUpsert.setDouble(5, porcentajeSumar);
+	                
+	                psUpsert.executeUpdate();
+	            }
+	            
+	            return true;
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Error al registrar actividad y progreso: " + e.getMessage());
+	        e.printStackTrace();
+	    }
+	    return false;
+	}
+
+	private void actualizarProgresoRealDeLogros(String usuario, int idActividad, double cantidadSumada) {
+	    // Esta query busca qué logros piden esta actividad, calcula el nuevo % y actualiza
+	    String sql = "UPDATE HACER_LOGRO HL " +
+	                 "JOIN LOGRO_REQUISITOS LR ON HL.id_logro = LR.id_logro " +
+	                 "SET HL.progreso = LEAST(100, HL.progreso + (? / LR.cantidad_objetivo * 100)), " +
+	                 "    HL.esta_hecho = IF(HL.progreso >= 100, 1, 0), " +
+	                 "    HL.fecha_desbloqueo = IF(HL.progreso >= 100 AND HL.fecha_desbloqueo IS NULL, CURRENT_DATE, HL.fecha_desbloqueo) " +
+	                 "WHERE HL.nombreUsuario = ? AND LR.id_actividad = ?";
+
+	    try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+	        ps.setDouble(1, cantidadSumada);
+	        ps.setString(2, usuario);
+	        ps.setInt(3, idActividad);
+	        ps.executeUpdate();
+	    } catch (SQLException e) {
+	        System.err.println("Error actualizando progreso: " + e.getMessage());
+	    }
 	}
 
 	public void actualizarProgresoMisiones(String usr, String nombreActividad, double cantidad) {
@@ -1030,8 +1091,8 @@ public class Modelo {
 	/**
 	 * Recupera el código OTP generado automáticamente por el motor de base de
 	 * datos. Este método actúa como puente entre el Trigger de MySQL y el servicio
-	 * de Email en Java. * @param usuario Nombre del usuario recién registrado
-	 * 
+	 * de Email en Java. 
+	 * @param usuario Nombre del usuario recién registrado
 	 * @return El código alfanumérico de 6 caracteres o null si no se encuentra
 	 */
 	public String obtenerUltimoOTP(String usuario) {
@@ -1057,7 +1118,7 @@ public class Modelo {
 	/**
 	 * Establece el nombre del usuario que está intentando acceder o registrarse. Se
 	 * utiliza para que la ventana de verificación OTP sepa a qué usuario validar.
-	 * * @param usr Nombre de usuario
+	 * @param usr Nombre de usuario
 	 */
 	public void setUltimoUsuarioRegistrado(String usr) {
 		this.ultimoUsuarioRegistrado = usr;
@@ -1109,6 +1170,28 @@ public class Modelo {
 			System.err.println("Error al consultar puntos: " + e.getMessage());
 		}
 		return 0;
+	}
+
+	public boolean completarLogroEnBD(String usuario, String nombreLogro) {
+		String sqlId = "SELECT id_logro FROM LOGROS WHERE nombre = ?";
+		String sqlInsert = "INSERT INTO HACER_LOGRO (nombreUsuario, id_logro, fecha_desbloqueo, esta_hecho, progreso) "
+				+ "VALUES (?, ?, CURRENT_DATE, 1, 100) "
+				+ "ON DUPLICATE KEY UPDATE esta_hecho = 1, progreso = 100, fecha_desbloqueo = CURRENT_DATE";
+		try {
+			java.sql.PreparedStatement psId = getConexion().prepareStatement(sqlId);
+			psId.setString(1, nombreLogro);
+			java.sql.ResultSet rs = psId.executeQuery();
+			if (rs.next()) {
+				int id = rs.getInt("id_logro");
+				java.sql.PreparedStatement psIns = getConexion().prepareStatement(sqlInsert);
+				psIns.setString(1, usuario);
+				psIns.setInt(2, id);
+				return psIns.executeUpdate() > 0;
+			}
+		} catch (java.sql.SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
 	}
 
 	public boolean eliminarLogroUsuario(String usuario, String nombreLogro) {

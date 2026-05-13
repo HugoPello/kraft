@@ -2,8 +2,7 @@
  * Clase controladora que actúa como intermediaria entre la Vista y el Modelo.
  * Gestiona los eventos de usuario, la navegación entre ventanas y la invocación
  * de servicios de mensajería externa.
- * 
- * @author Hugo
+ * * @author Hugo
  */
 
 package Controlador;
@@ -30,6 +29,7 @@ import Vista._00_Login;
 import Vista._01_Registro;
 import Vista._02_Inicio;
 import Vista._04_DentroActividad;
+import Vista._05_Logros;
 import Vista._08_PerfilUsuario;
 import Vista._09_OlvidoContraseña;
 import Vista._10_CrearEventoAdmin;
@@ -62,13 +62,19 @@ public class Controlador {
 	// =========================================================================
 
 	public void cambiarVentana(int desde, int hasta) {
-		if (hasta == 11 && !miModelo.esUsuarioAdmin()) {
-			javax.swing.JOptionPane.showMessageDialog(null, "Acceso denegado: Se requieren permisos de administrador.",
-					"Seguridad del Sistema", javax.swing.JOptionPane.ERROR_MESSAGE);
-			return;
-		}
-		((JFrame) misVistas[desde]).setVisible(false);
-		((JFrame) misVistas[hasta]).setVisible(true);
+	    if (hasta == 11 && !miModelo.esUsuarioAdmin()) {
+	        javax.swing.JOptionPane.showMessageDialog(null, "Acceso denegado: Se requieren permisos de administrador.",
+	                "Seguridad del Sistema", javax.swing.JOptionPane.ERROR_MESSAGE);
+	        return;
+	    }
+	    
+	    // Refresco forzado y seguro antes de abrir la pestaña de Logros
+	    if (hasta == 5 && misVistas[5] instanceof _05_Logros) {
+	        ((_05_Logros) misVistas[5]).cargarDatosLogros();
+	    }
+	    
+	    ((JFrame) misVistas[desde]).setVisible(false);
+	    ((JFrame) misVistas[hasta]).setVisible(true);
 	}
 
 	public void abrirConfiguracionPopUp() {
@@ -168,19 +174,19 @@ public class Controlador {
 			return;
 		}
 
-		// 3. Validación de Captcha (Añadido)
+		// 3. Validación de Captcha
 		if (!captchaUsuario.equalsIgnoreCase(captchaReal)) {
 			vistaReg.mostrarMensaje("Error: El código Captcha no coincide.");
 			return;
 		}
 
-		// 4. Validación de coincidencia de contraseñas [Tu código original]
+		// 4. Validación de coincidencia de contraseñas
 		if (!pwd.equals(pwdRepetir)) {
 			vistaReg.mostrarMensaje("Error: Las contraseñas no coinciden.");
 			return;
 		}
 
-		// 5. Validación de formato de fecha [Tu código original]
+		// 5. Validación de formato de fecha
 		if (!fecha.isEmpty()) {
 			try {
 				java.sql.Date.valueOf(fecha);
@@ -206,7 +212,7 @@ public class Controlador {
 			return;
 		}
 
-		// 8. Llamada al modelo (7 parámetros: incluye el correo)
+		// 8. Llamada al modelo
 		boolean insertadoOK = miModelo.registroCompleto(usr, pwd, rolFinal, fecha, idPregunta, respuesta, emailDestino);
 
 		if (insertadoOK) {
@@ -256,7 +262,6 @@ public class Controlador {
 	 * sesión activa del usuario.
 	 */
 	public void subirFotoPerfil() {
-		// 1. Abrir explorador de archivos de Windows
 		JFileChooser chooser = new JFileChooser();
 		FileNameExtensionFilter filter = new FileNameExtensionFilter("Imágenes (JPG, PNG)", "jpg", "jpeg", "png");
 		chooser.setFileFilter(filter);
@@ -268,13 +273,11 @@ public class Controlador {
 			String usr = miModelo.getUsuarioLogueado();
 
 			try {
-				// 2. Crear carpeta "perfiles" en el proyecto si no existe
 				File carpeta = new File("perfiles");
 				if (!carpeta.exists()) {
 					carpeta.mkdir();
 				}
 
-				// 3. Copiar la imagen y llamarla como el usuario (ej: perfiles/Ivan.jpg)
 				File archivoDestino = new File("perfiles/" + usr + ".jpg");
 				Files.copy(archivoOrigen.toPath(), archivoDestino.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
@@ -291,12 +294,11 @@ public class Controlador {
 	// 8. RECUPERACIÓN DE CONTRASEÑA Y PERFIL
 	// =========================================================================
 
-	// @Author: Hugo
 	public void restablecerContrasena() {
 	    _09_OlvidoContraseña vista = (_09_OlvidoContraseña) misVistas[9];
 
 	    String usr = vista.getUsuario().trim();
-	    String preguntaActual = vista.getPreguntaSeleccionada(); // Usa el nuevo getter
+	    String preguntaActual = vista.getPreguntaSeleccionada(); 
 	    String respuesta = vista.getRespuestaSeguridad().trim();
 	    String nuevaPass = vista.getNuevaPass();
 	    String confirmPass = vista.getConfirmPass();
@@ -321,8 +323,6 @@ public class Controlador {
 	    }
 
 	    // 4. Verificación de seguridad en el Modelo
-	    // IMPORTANTE: Como ahora no sabemos el ID por el índice, el modelo debe 
-	    // verificar la respuesta simplemente por el nombre de usuario.
 	    boolean esCorrecta = miModelo.verificarRespuestaSoloPorUsuario(usr, respuesta);
 
 	    if (esCorrecta) {
@@ -363,8 +363,6 @@ public class Controlador {
 		File fotoFile = new File("perfiles/" + usr + ".jpg");
 		if (fotoFile.exists()) {
 			try {
-				// Leemos la imagen y la escalamos para que encaje perfecta en el cuadro de
-				// 120x120
 				BufferedImage imgOriginal = ImageIO.read(fotoFile);
 				Image imgEscalada = imgOriginal.getScaledInstance(120, 120, Image.SCALE_SMOOTH);
 				vista.setImagenPerfil(new ImageIcon(imgEscalada));
@@ -372,7 +370,6 @@ public class Controlador {
 				vista.setImagenPerfil(null);
 			}
 		} else {
-			// Si el usuario no ha subido foto nunca, lo dejamos vacío
 			vista.setImagenPerfil(null);
 		}
 	}
@@ -465,10 +462,15 @@ public class Controlador {
 	}
 
 	public Object[][] getTablaLogrosPerfil() {
-		String usr = miModelo.getUsuarioLogueado();
-		String sql = "SELECT L.nombre, DATE_FORMAT(HL.fecha_desbloqueo, '%d/%m/%Y') " + "FROM LOGROS L "
-				+ "JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro " + "WHERE HL.nombreUsuario = ?";
-		return miModelo.obtenerDatosTabla(sql, 2, usr);
+	    String usr = miModelo.getUsuarioLogueado();
+	    
+	    // Añadimos "AND HL.esta_hecho = 1" para que solo aparezcan los completados
+	    String sql = "SELECT L.nombre, DATE_FORMAT(HL.fecha_desbloqueo, '%d/%m/%Y') " + 
+	                 "FROM LOGROS L " +
+	                 "JOIN HACER_LOGRO HL ON L.id_logro = HL.id_logro " + 
+	                 "WHERE HL.nombreUsuario = ? AND HL.esta_hecho = 1"; // <--- FILTRO CRÍTICO
+	                 
+	    return miModelo.obtenerDatosTabla(sql, 2, usr);
 	}
 
 	public Object[][] getTablaInventarioPerfil() {
@@ -658,50 +660,61 @@ public class Controlador {
 	}
 
 	public Object[][] getTablaActividadesPorTipo() {
-		String tipo = miModelo.getTipoActividadSeleccionada();
-		String usr = miModelo.getUsuarioLogueado();
+	    String tipo = miModelo.getTipoActividadSeleccionada();
+	    String usr = miModelo.getUsuarioLogueado();
 
-		// Esta súper-consulta calcula cuánto lleva hecho el usuario de cada actividad y
-		// muestra la recompensa
-		String sql = "SELECT A.nombre, A.dificultad, "
-				+ "CONCAT(IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0), ' / ', A.meta_cantidad, ' ', A.unidad_medida), "
-				+ "CONCAT(A.puntos, ' 💰') " + "FROM ACTIVIDADES A WHERE A.tipo = ?";
+	    // Sumamos todo el progreso. Si es MENOR que la meta (o 0), se muestra en disponibles.
+	    String sql = "SELECT A.nombre, A.dificultad, "
+	            + "CONCAT(IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0), ' / ', A.meta_cantidad, ' ', A.unidad_medida), "
+	            + "CONCAT(A.puntos, ' 💰') "
+	            + "FROM ACTIVIDADES A WHERE A.tipo = ? "
+	            + "AND IFNULL((SELECT SUM(cantidad) FROM COMPLETAR_ACTIVIDAD WHERE id_actividad = A.id_actividad AND nombreUsuario = ?), 0) < A.meta_cantidad";
 
-		// Le pasamos 4 como número de columnas, y los parámetros (usr, tipo)
-		return miModelo.obtenerDatosTabla(sql, 4, usr, tipo);
+	    // Pasamos el usuario dos veces porque hay dos '?' referidos al usuario en la query
+	    return miModelo.obtenerDatosTabla(sql, 4, usr, tipo, usr);
 	}
-
+	
 	public Object[][] getTablaHistorialUsuario() {
-		String usr = miModelo.getUsuarioLogueado();
-		String sql = "SELECT A.nombre, DATE_FORMAT(CA.fecha_realizacion, '%d/%m/%Y %H:%i') " + "FROM ACTIVIDADES A "
-				+ "JOIN COMPLETAR_ACTIVIDAD CA ON A.id_actividad = CA.id_actividad "
-				+ "WHERE CA.nombreUsuario = ? ORDER BY CA.fecha_realizacion DESC";
-		return miModelo.obtenerDatosTabla(sql, 2, usr);
+	    String usr = miModelo.getUsuarioLogueado();
+	    
+	    // Agrupamos por actividad y comprobamos con HAVING que la suma haya llegado a la meta
+	    String sql = "SELECT A.nombre, DATE_FORMAT(MAX(CA.fecha_realizacion), '%d/%m/%Y %H:%i') " 
+	            + "FROM ACTIVIDADES A "
+	            + "JOIN COMPLETAR_ACTIVIDAD CA ON A.id_actividad = CA.id_actividad "
+	            + "WHERE CA.nombreUsuario = ? "
+	            + "GROUP BY A.id_actividad, A.nombre, A.meta_cantidad "
+	            + "HAVING SUM(CA.cantidad) >= A.meta_cantidad "
+	            + "ORDER BY MAX(CA.fecha_realizacion) DESC";
+	            
+	    return miModelo.obtenerDatosTabla(sql, 2, usr);
 	}
 
 	public void guardarNuevaActividad() {
-		_14_CrearActividad vistaCrear = (_14_CrearActividad) misVistas[15];
-		String nombre = vistaCrear.getNombreActividad();
-		String tipo = vistaCrear.getTipoActividad();
-		String dif = vistaCrear.getDificultadActividad();
-		int pts = vistaCrear.getPuntosActividad();
-		String frec = vistaCrear.getFrecuenciaActividad();
-		String unidad = vistaCrear.getUnidadActividad();
-		double cantidad = vistaCrear.getCantidadMeta(); // Recogemos la cantidad
+	    _14_CrearActividad vistaCrear = (_14_CrearActividad) misVistas[15];
+	    String nombre = vistaCrear.getNombreActividad();
+	    String tipo = vistaCrear.getTipoActividad();
+	    String dif = vistaCrear.getDificultadActividad();
+	    int pts = vistaCrear.getPuntosActividad();
+	    String frec = vistaCrear.getFrecuenciaActividad();
+	    String unidad = vistaCrear.getUnidadActividad();
+	    double cantidad = vistaCrear.getCantidadMeta();
+	    
+	    String categoria = vistaCrear.getCategoriaActividad(); 
 
-		if (nombre == null || nombre.trim().isEmpty()) {
-			vistaCrear.mostrarMensaje("Error: El nombre es obligatorio.");
-			return;
-		}
+	    if (nombre == null || nombre.trim().isEmpty()) {
+	        vistaCrear.mostrarMensaje("Error: El nombre es obligatorio.");
+	        return;
+	    }
 
-		boolean exito = miModelo.crearActividad(nombre, tipo, dif, pts, frec, unidad, cantidad);
-		if (exito) {
-			vistaCrear.mostrarMensaje("¡Actividad '" + nombre + "' creada correctamente!");
-			vistaCrear.limpiarFormulario();
-			cambiarVentana(14, 3);
-		} else {
-			vistaCrear.mostrarMensaje("Error en la Base de Datos al crear actividad.");
-		}
+	    boolean exito = miModelo.crearActividad(nombre, tipo, dif, pts, frec, unidad, cantidad, categoria);
+	    
+	    if (exito) {
+	        vistaCrear.mostrarMensaje("¡Actividad '" + nombre + "' creada correctamente!");
+	        vistaCrear.limpiarFormulario();
+	        cambiarVentana(14, 3);
+	    } else {
+	        vistaCrear.mostrarMensaje("Error en la Base de Datos al crear actividad.");
+	    }
 	}
 
 	public void completarActividad() {
@@ -713,7 +726,6 @@ public class Controlador {
 			return;
 		}
 
-		// Pop-up para pedir la cantidad
 		String input = javax.swing.JOptionPane.showInputDialog(null,
 				"¿Qué cantidad de '" + actividadElegida + "' has realizado?", "Registrar Progreso",
 				javax.swing.JOptionPane.QUESTION_MESSAGE);
@@ -723,11 +735,9 @@ public class Controlador {
 				double cantidad = Double.parseDouble(input.replace(",", "."));
 				String usr = miModelo.getUsuarioLogueado();
 
-				// 1. Registramos la actividad en el historial
 				boolean exito = miModelo.registrarActividadCompletada(usr, actividadElegida, cantidad);
 
 				if (exito) {
-					// 2. Sumamos al motor de misiones
 					miModelo.actualizarProgresoMisiones(usr, actividadElegida, cantidad);
 					vista4.mostrarMensaje("¡Enhorabuena! Has completado: " + cantidad + " de " + actividadElegida);
 					vista4.cargarDatosTablas();
@@ -755,13 +765,11 @@ public class Controlador {
 	public void guardarAjustes() {
 		_13_AjustesUsuario vista = (_13_AjustesUsuario) misVistas[14];
 
-		// 1. Recogemos los datos
 		String usrActual = miModelo.getUsuarioLogueado();
 		String nuevoUsr = vista.getNuevoNombre();
 		String nuevoCorreo = vista.getNuevoEmail();
 		String nuevaPwd = vista.getNuevaPass();
 
-		// 2. Validaciones básicas
 		if (nuevoUsr.trim().isEmpty() || nuevoCorreo.trim().isEmpty()) {
 			vista.mostrarMensaje("El nombre de usuario y el correo no pueden estar vacíos.");
 			return;
@@ -781,15 +789,20 @@ public class Controlador {
 		boolean exito = miModelo.actualizarAjustes(usrActual, nuevoUsr, nuevoCorreo, nuevaPwd);
 
 		if (exito) {
-
 			miModelo.setUsuarioLogueado(nuevoUsr);
-
 			vista.mostrarMensaje("Perfil actualizado correctamente.");
 			vista.setDatosActuales(nuevoUsr, nuevoCorreo);
 			cambiarVentana(14, 8); // Volvemos al perfil
 		} else {
 			vista.mostrarMensaje("Error al actualizar. Es posible que el nombre de usuario ya esté en uso.");
 		}
+	}
+	
+	public void marcarLogroCompletado(String nombreLogro) {
+	    String usr = miModelo.getUsuarioLogueado();
+	    if (miModelo.completarLogroEnBD(usr, nombreLogro)) {
+	        ((_05_Logros) misVistas[5]).cargarDatosLogros();
+	    }
 	}
 
 	public void alAbrirAjustes() {
@@ -801,13 +814,7 @@ public class Controlador {
 
 	/**
 	 * Invoca el procedimiento almacenado en MySQL para validar el código OTP.
-	 * Gestiona la respuesta del servidor y, en caso de éxito, activa la sesión del
-	 * usuario.
-	 * 
-	 * @param codigoIntroducido El token de 6 caracteres que el usuario recibió por
-	 *                          email.
 	 */
-	// @Author: Hugo
 	public void validarCodigoOTP(String codigoIntroducido) {
 		String usr = miModelo.getUltimoUsuarioRegistrado();
 
@@ -826,7 +833,8 @@ public class Controlador {
 			}
 
 		} catch (SQLException e) {
-			JOptionPane.showMessageDialog(null, "Código inválido o expirado.", "Error 2FA", JOptionPane.ERROR_MESSAGE);
+			// Aquí capturamos el SIGNAL SQLSTATE '45000' que configuramos en MySQL
+			JOptionPane.showMessageDialog(null, e.getMessage(), "Error de Verificación", JOptionPane.ERROR_MESSAGE);
 		}
 	}
 
@@ -846,11 +854,6 @@ public class Controlador {
 		return miModelo.obtenerLogrosUsuario(usuario);
 	}
 
-	/**
-	 * Solicita al modelo la lista de todos los logros disponibles en el sistema.
-	 * 
-	 * @author Hugo
-	 */
 	public ArrayList<String> getTodosLosLogros() {
 		return miModelo.obtenerTodosLosLogros();
 	}
@@ -901,7 +904,10 @@ public class Controlador {
 
 	public int getMiPuestoSemanal(String usuario) {
 	    int puesto = miModelo.obtenerPuestoSemanal(usuario);
-	    // Si el puesto es 0, significa que no tiene registros esta semana
 	    return puesto;
+	}
+
+	public Object[][] getTablaLogrosDisponibles() {
+		return miModelo.obtenerLogrosPendientes(miModelo.getUsuarioLogueado());
 	}
 }
