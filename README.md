@@ -19,7 +19,7 @@ El proyecto implementa el patrón **Modelo-Vista-Controlador** mediante una inte
 
 * **Modelo (`Modelo.java`):** Gestiona la persistencia JDBC, la lógica de negocio y la lectura dinámica de credenciales mediante `config.ini`.
 * **Vista (`Vista/`):** 19 interfaces gráficas optimizadas con estética *Dark Mode*, incluyendo validación de campos en tiempo real y componentes personalizados.
-* **Controlador (`Controlador.java`):** Orquestador central encargado de la navegación, manipulación de ficheros (NIO.2) y el despacho de servicios externos.
+* **Controlador (`Controlador.java`):** Orquestador central encargado de la navegación, manipulación de ficheros y el despacho de servicios externos.
 
 ---
 
