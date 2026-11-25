@@ -94,6 +94,5 @@ Proyecto final de **1.º de DAM en U-Tad (curso 2025-26)**, desarrollado en equi
 * **Carlos**
 * **Diego Marquez**
 * **Ivan Mena**
-* **Cubanito55**
 
 > Este repositorio es una copia pública del repositorio original de clase, al que se le han eliminado credenciales y archivos compilados.
