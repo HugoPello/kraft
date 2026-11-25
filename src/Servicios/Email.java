@@ -19,8 +19,15 @@ public class Email {
      */
 	public void enviarCorreoOTP(String emailDestino, String codigoOTP) {
 	    try {
-	    	// Instanciamos el servicio utilizando las credenciales de la App Password de Google.
-	        EmailService mail = new EmailService("kraftutad@gmail.com", "REDACTED");
+	    	// Las credenciales (cuenta de Gmail + App Password) se leen de variables de entorno
+	    	// para no guardarlas nunca en el código: KRAFT_MAIL_USER y KRAFT_MAIL_PASSWORD.
+	    	String usuario = System.getenv("KRAFT_MAIL_USER");
+	    	String password = System.getenv("KRAFT_MAIL_PASSWORD");
+	    	if (usuario == null || password == null) {
+	    		System.err.println("Envío de OTP desactivado: define KRAFT_MAIL_USER y KRAFT_MAIL_PASSWORD.");
+	    		return;
+	    	}
+	        EmailService mail = new EmailService(usuario, password);
 	        
 	        // Configuración del contenido del mensaje para el sistema 2FA
 	        String asunto = "Código de Verificación - Proyecto 2FA";

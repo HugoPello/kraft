@@ -1,1 +1,14 @@
+# Compilados
 /target/
+/bin/
+*.class
+
+# IDE
+.idea/
+.settings/
+.classpath
+.project
+
+# Credenciales locales (copia config.example.ini a config.ini)
+config.ini
+.env

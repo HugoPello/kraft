@@ -67,4 +67,33 @@ Herramienta exclusiva para administradores que permite un control total del ento
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone [https://github.com/DAM-UTAD-1-2526/ud14-tarea-final-404-team-not-found.git](https://github.com/DAM-UTAD-1-2526/ud14-tarea-final-404-team-not-found.git)
+   git clone https://github.com/HugoPello/kraft.git
+   cd kraft
+   ```
+
+2. **Crear la base de datos** (MySQL 8) ejecutando los scripts `Tablas UD13.sql` y `LoginRegistro.sql`.
+
+3. **Configurar la conexión:** copia `config.example.ini` como `config.ini` y pon tu usuario, contraseña y URL JDBC. `config.ini` está en `.gitignore` y nunca se sube al repositorio. También se puede cambiar desde la ventana de *Configuración* de la app.
+
+4. **(Opcional) Activar el envío del código 2FA por email** con una cuenta de Gmail y una [App Password](https://support.google.com/accounts/answer/185833):
+   ```powershell
+   $env:KRAFT_MAIL_USER = "tu_cuenta@gmail.com"
+   $env:KRAFT_MAIL_PASSWORD = "tu_app_password"
+   ```
+   Sin estas variables, la app funciona igual pero no envía el correo.
+
+5. **Compilar y ejecutar** (Java 21 + Maven), con el conector `lib/mysql-connector-j-9.6.0.jar` en el classpath. Punto de entrada: `Controlador.Main`.
+
+---
+
+## 👥 Equipo
+
+Proyecto final de **1.º de DAM en U-Tad (curso 2025-26)**, desarrollado en equipo por **404 Team Not Found**:
+
+* **Hugo Pello**
+* **Carlos**
+* **Diego Marquez**
+* **Ivan Mena**
+* **Cubanito55**
+
+> Este repositorio es una copia pública del repositorio original de clase, al que se le han eliminado credenciales y archivos compilados.
